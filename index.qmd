@@ -1,0 +1,30 @@
+---
+title: Conspiracy Theorists
+---
+Do you question the government? Do you tend not to fully believe them when they tell us things? Well, you have come to the right place. In here, we question everything, from JFK assassination to the 2020 election. We are not trying to change anyone's mind, we just want you to be open to the idea that the truth is not what it seems to be.
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+
+if(!require("leaflet")){
+    options(repos=c(CRAN="https://cloud.r-project.org"))
+    install.packages("leaflet")
+    stopifnot(require("leaflet"))
+}
+
+baruch_longitude <- -73.98333
+baruch_latitude  <- +40.74028
+
+leaflet() |>
+  addTiles() |>
+  setView(baruch_longitude, baruch_latitude, zoom=17) |>
+  addPopups(baruch_longitude, baruch_latitude, 
+            "I am a Master's student at <b>Baruch College</b>!")
+```
+```{r}
+#| include: false
+1+1
+```
+--------------
+Last Updated: `r format(Sys.time(), "%A %m %d, %Y at %H:%M%p")`
