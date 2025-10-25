@@ -63,7 +63,11 @@ POPULATION <- get_acs_all_years("B01003_001") |>
 # Total number of households
 HOUSEHOLDS <- get_acs_all_years("B11001_001") |>
     rename(households = B11001_001)
-
+```
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
 get_building_permits <- function(start_year = 2009, end_year = 2023){
     fname <- glue("housing_units_{start_year}_{end_year}.csv")
     fname <- file.path("data", "mp02", fname)
@@ -122,56 +126,91 @@ get_building_permits <- function(start_year = 2009, end_year = 2023){
 }
 
 PERMITS <- get_building_permits()
+```
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+library(readr)
+library(dplyr)
+library(stringr)
+library(purrr)
 
-library(httr2)
-library(rvest)
-get_bls_industry_codes <- function(){
-    fname <- fname <- file.path("data", "mp02", "bls_industry_codes.csv")
-    
-    if(!file.exists(fname)){
-    
-        resp <- request("https://www.bls.gov") |> 
-            req_url_path("cew", "classifications", "industry", "industry-titles.htm") |>
-            req_headers(`User-Agent` = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:143.0) Gecko/20100101 Firefox/143.0") |> 
-            req_error(is_error = \(resp) FALSE) |>
-            req_perform()
-        
-        resp_check_status(resp)
-        
-        naics_table <- resp_body_html(resp) |>
-            html_element("#naics_titles") |> 
-            html_table() |>
-            mutate(title = str_trim(str_remove(str_remove(`Industry Title`, Code), "NAICS"))) |>
-            select(-`Industry Title`) |>
-            mutate(depth = if_else(nchar(Code) <= 5, nchar(Code) - 1, NA)) |>
-            filter(!is.na(depth))
-        
-        naics_table <- naics_table |> 
-            filter(depth == 4) |> 
-            rename(level4_title=title) |> 
-            mutate(level1_code = str_sub(Code, end=2), 
-                   level2_code = str_sub(Code, end=3), 
-                   level3_code = str_sub(Code, end=4)) |>
-            left_join(naics_table, join_by(level1_code == Code)) |>
-            rename(level1_title=title) |>
-            left_join(naics_table, join_by(level2_code == Code)) |>
-            rename(level2_title=title) |>
-            left_join(naics_table, join_by(level3_code == Code)) |>
-            rename(level3_title=title) |>
-            select(-starts_with("depth")) |>
-            rename(level4_code = Code) |>
-            select(level1_title, level2_title, level3_title, level4_title, 
-                   level1_code,  level2_code,  level3_code,  level4_code)
-    
-        write_csv(naics_table, fname)
-    }
-    
-    read_csv(fname, show_col_types=FALSE)
-    
+get_bls_industry_codes <- function() {
+    fname <- file.path("data", "mp02", "industry-titles.csv")
+
+    raw_tbl <- read_csv(fname, show_col_types = FALSE) |>
+        rename_with(str_trim) |>
+        rename(
+            industry_code = matches("^industry[_ ]*code$", ignore.case = TRUE),
+            industry_title = matches("^industry[_ ]*title$", ignore.case = TRUE)
+        )
+
+    naics_table <- raw_tbl |>
+        mutate(
+            title = str_trim(
+                str_remove(
+                    str_remove(industry_title, industry_code),
+                    "NAICS"
+                )
+            ),
+            depth = if_else(
+                nchar(industry_code) <= 5,
+                nchar(industry_code) - 1,
+                NA_integer_
+            ),
+            industry_code_num = suppressWarnings(as.integer(industry_code))
+        ) |>
+        filter(!is.na(depth))
+
+    naics_level4 <- naics_table |>
+        filter(depth == 4) |>
+        rename(level4_title = title) |>
+        mutate(
+            level1_code = suppressWarnings(as.integer(str_sub(industry_code, end = 2))),
+            level2_code = suppressWarnings(as.integer(str_sub(industry_code, end = 3))),
+            level3_code = suppressWarnings(as.integer(str_sub(industry_code, end = 4))),
+            level4_code_keep = industry_code
+        )
+
+    joined <- naics_level4 |>
+        left_join(
+            naics_table,
+            join_by(level1_code == industry_code_num)
+        ) |>
+        rename(level1_title = title) |>
+        left_join(
+            naics_table,
+            join_by(level2_code == industry_code_num)
+        ) |>
+        rename(level2_title = title) |>
+        left_join(
+            naics_table,
+            join_by(level3_code == industry_code_num)
+        ) |>
+        rename(level3_title = title)
+
+    INDUSTRY_CODES <- joined |>
+        transmute(
+            level1_title,
+            level2_title,
+            level3_title,
+            level4_title,
+            level1_code,
+            level2_code,
+            level3_code,
+            level4_code = level4_code_keep
+        )
+
+    INDUSTRY_CODES
 }
 
 INDUSTRY_CODES <- get_bls_industry_codes()
-
+```
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
 library(httr2)
 library(rvest)
 get_bls_qcew_annual_averages <- function(start_year=2009, end_year=2023){
@@ -241,7 +280,6 @@ get_bls_qcew_annual_averages <- function(start_year=2009, end_year=2023){
 
 WAGES <- get_bls_qcew_annual_averages()
 ```
-
 ``` {r}
 #| echo: false
 #| message: false
