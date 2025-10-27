@@ -68,6 +68,16 @@ ul.task-list li input[type="checkbox"] {
     "search-label": "Search"
   }
 }</script>
+<link href="site_libs/htmltools-fill-0.5.8.1/fill.css" rel="stylesheet">
+<script src="site_libs/htmlwidgets-1.6.4/htmlwidgets.js"></script>
+<link href="site_libs/datatables-css-0.0.0/datatables-crosstalk.css" rel="stylesheet">
+<script src="site_libs/datatables-binding-0.34.0/datatables.js"></script>
+<script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
+<link href="site_libs/dt-core-1.13.6/css/jquery.dataTables.min.css" rel="stylesheet">
+<link href="site_libs/dt-core-1.13.6/css/jquery.dataTables.extra.css" rel="stylesheet">
+<script src="site_libs/dt-core-1.13.6/js/jquery.dataTables.min.js"></script>
+<link href="site_libs/crosstalk-1.2.2/css/crosstalk.min.css" rel="stylesheet">
+<script src="site_libs/crosstalk-1.2.2/js/crosstalk.min.js"></script>
 
 
 </head>
@@ -118,8 +128,44 @@ ul.task-list li input[type="checkbox"] {
 
 
 <p>How can something truly be called a necessity if so many people can’t afford it? In a perfect world, one could live wherever they wanted. Spoiler alert, this world is far from perfect. Affordability isn’t just about price—it’s about access, opportunity, and fairness in everyday life.</p>
-<p>But then again, you have NIMBY’s who think their opinion matter more than others. <img src="data/mp02/NIMBY.png" class="img-fluid quarto-figure quarto-figure-center" style="width:60.0%" alt="Nimby"></p>
-<p>NIMBY’s are my biggest opposition going back years. Unfortunately for them, I am here to evicerate them. It is time to turn those N’s into Y’s. The YIMBY epidemic is upon us</p>
+<p>But then again, you have NIMBY’s who think their opinions matter more than others. <img src="data/mp02/NIMBY.png" class="img-fluid quarto-figure quarto-figure-center" style="width:60.0%" alt="Nimby"></p>
+<p>NIMBY’s are my biggest opposition going back years. Unfortunately for them, I am here to evicerate them. With your help, we will be able to turn those N’s into Y’s and start the YIMBY epidemic</p>
+<p>In the following page, I will show you my analysis into what a federal YIMBY-incentive program could look like.</p>
+<p>First, I want to show the data I will be using that will proivde some background knowledge to understand better what is happening around the country already.</p>
+<p>The CBSA that permitted the largest number of new housing units between 2010 and 2019 was <strong>Houston-Sugar Land-Baytown, TX Metro Area</strong>.</p>
+<div class="cell">
+<div class="cell-output-display">
+<div class="datatables html-widget html-fill-item" id="htmlwidget-be2b3e9050be704968fd" style="width:100%;height:auto;"></div>
+<script type="application/json" data-for="htmlwidget-be2b3e9050be704968fd">{"x":{"filter":"none","vertical":false,"caption":"<caption>Top 5 Years for New Housing Units Permitted in Albuquerque, NM (CBSA 10740)<\/caption>","data":[["1","2","3","4","5"],[2021,2022,2023,2013,2014],[4021,2852,2834,2606,2543]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th> <\/th>\n      <th>year<\/th>\n      <th>total_units<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"dom":"t","scrollX":true,"columnDefs":[{"className":"dt-right","targets":[1,2]},{"orderable":false,"targets":0},{"name":" ","targets":0},{"name":"year","targets":1},{"name":"total_units","targets":2}],"order":[],"autoWidth":false,"orderClasses":false}},"evals":[],"jsHooks":[]}</script>
+</div>
+</div>
+<div class="cell">
+<div class="cell-output-display">
+<div class="datatables html-widget html-fill-item" id="htmlwidget-3921fffd97f4b233a218" style="width:100%;height:auto;"></div>
+<script type="application/json" data-for="htmlwidget-3921fffd97f4b233a218">{"x":{"filter":"none","vertical":false,"caption":"<caption>Top 5 States by Average Individual Income (2015)<\/caption>","data":[["1","2","3","4","5"],["DC","MA","CT","AK","VT"],["District of Columbia","Massachusetts","Connecticut","Alaska","Vermont"],["33,233","27,621","27,194","26,426","26,380"]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th> <\/th>\n      <th>state_abbrev<\/th>\n      <th>state_name<\/th>\n      <th>avg_individual_income<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"pageLength":5,"dom":"t","columnDefs":[{"orderable":false,"targets":0},{"name":" ","targets":0},{"name":"state_abbrev","targets":1},{"name":"state_name","targets":2},{"name":"avg_individual_income","targets":3}],"order":[],"autoWidth":false,"orderClasses":false,"lengthMenu":[5,10,25,50,100]}},"evals":[],"jsHooks":[]}</script>
+</div>
+</div>
+<div class="cell">
+<div class="cell-output-display">
+<div class="datatables html-widget html-fill-item" id="htmlwidget-724878a754d68b0324d6" style="width:100%;height:auto;"></div>
+<script type="application/json" data-for="htmlwidget-724878a754d68b0324d6">{"x":{"filter":"none","vertical":false,"caption":"<caption>Top 5 Most Recent Years – CBSA with the Most Data Scientists (NAICS 5182)<\/caption>","data":[["1","2","3","4","5"],[2023,2022,2021,2019,2018],[41860,41860,12060,41860,41860],["San Francisco-Oakland-Fremont, CA Metro Area","San Francisco-Oakland-Fremont, CA Metro Area","Atlanta-Sandy Springs-Marietta, GA Metro Area","San Francisco-Oakland-Fremont, CA Metro Area","San Francisco-Oakland-Fremont, CA Metro Area"]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th> <\/th>\n      <th>YEAR<\/th>\n      <th>cbsa_code<\/th>\n      <th>cbsa_name<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"dom":"t","scrollX":true,"columnDefs":[{"className":"dt-right","targets":[1,2]},{"orderable":false,"targets":0},{"name":" ","targets":0},{"name":"YEAR","targets":1},{"name":"cbsa_code","targets":2},{"name":"cbsa_name","targets":3}],"order":[],"autoWidth":false,"orderClasses":false}},"evals":[],"jsHooks":[]}</script>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 1 × 4
+   YEAR cbsa_name                                      cbsa_code employment_5182
+  &lt;dbl&gt; &lt;chr&gt;                                              &lt;dbl&gt;           &lt;dbl&gt;
+1  2015 New York-Northern New Jersey-Long Island, NY-…     35620           18922</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="mp02_files/figure-html/unnamed-chunk-9-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
 
 
 
