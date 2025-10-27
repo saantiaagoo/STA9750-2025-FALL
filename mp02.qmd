@@ -2,7 +2,16 @@
 title: "Affordability for 500"
 format: html
 ---
-Can you afford it?
+How can something truly be called a necessity if so many people can’t afford it?
+In a perfect world, one could live wherever they wanted.
+Spoiler alert, this world is far from perfect.
+Affordability isn’t just about price—it’s about access, opportunity, and fairness in everyday life.
+
+But then again, you have NIMBY's who think their opinion matter more than others.
+![Nimby](data/mp02/NIMBY.png){fig-align="center" width=60%}
+
+NIMBY's are my biggest opposition going back years. Unfortunately for them, I am here to evicerate them.
+It is time to turn those N's into Y's. The YIMBY epidemic is upon us
 ```{r}
 #| echo: false
 #| message: false
@@ -279,101 +288,4 @@ get_bls_qcew_annual_averages <- function(start_year=2009, end_year=2023){
 }
 
 WAGES <- get_bls_qcew_annual_averages()
-```
-``` {r}
-#| echo: false
-#| message: false
-#| warning: false
-# Combine ACS datasets
-ACS <- INCOME %>%
-  left_join(RENT, by = c("GEOID", "year", "NAME")) %>%
-  left_join(POPULATION, by = c("GEOID", "year", "NAME")) %>%
-  left_join(HOUSEHOLDS, by = c("GEOID", "year", "NAME"))
-
-# Add building permits
-ACS <- ACS %>%
-  left_join(PERMITS, by = c("GEOID" = "CBSA", "year"))
-
-# Combine wages and industry info (optional)
-WAGES_FULL <- WAGES %>%
-  left_join(INDUSTRY_CODES, by = c("INDUSTRY" = "level4_code"))
-
-```
-```{r}
-#| echo: false
-#| message: false
-#| warning: false
-import graphviz
-
-# Define the ERD diagram
-erd = graphviz.Digraph(format='png')
-erd.attr(rankdir='LR', fontsize='10')
-
-# ACS tables
-erd.node('INCOME', '''INCOME
-------------------
-GEOID (PK, FK)
-NAME
-year (PK, FK)
-household_income''')
-
-erd.node('RENT', '''RENT
-------------------
-GEOID (PK, FK)
-NAME
-year (PK, FK)
-monthly_rent''')
-
-erd.node('POP', '''POPULATION
-------------------
-GEOID (PK, FK)
-NAME
-year (PK, FK)
-population''')
-
-erd.node('HOUSE', '''HOUSEHOLDS
-------------------
-GEOID (PK, FK)
-NAME
-year (PK, FK)
-households''')
-
-# PERMITS table
-erd.node('PERMITS', '''PERMITS
-------------------
-CBSA (FK to GEOID)
-year (FK)
-new_housing_units_permitted''')
-
-# WAGES and INDUSTRY_CODES tables
-erd.node('WAGES', '''WAGES
-------------------
-FIPS (geo ID)
-INDUSTRY (FK)
-YEAR
-EMPLOYMENT
-TOTAL_WAGES
-AVG_WAGE''')
-
-erd.node('INDUSTRY', '''INDUSTRY_CODES
-------------------
-level1_code
-level2_code
-level3_code
-level4_code (PK)
-level1_title
-level2_title
-level3_title
-level4_title''')
-
-# Define relationships
-erd.edge('INCOME', 'RENT', label='GEOID, year')
-erd.edge('RENT', 'POP', label='GEOID, year')
-erd.edge('POP', 'HOUSE', label='GEOID, year')
-erd.edge('HOUSE', 'PERMITS', label='GEOID = CBSA, year')
-erd.edge('WAGES', 'INDUSTRY', label='INDUSTRY = level4_code')
-
-# Export the ERD
-erd.render('data_relationship_diagram', view=True)
-
 ```
