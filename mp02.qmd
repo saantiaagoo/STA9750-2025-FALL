@@ -3,17 +3,28 @@ title: "Affordability for 500"
 format: html
 ---
 How can something truly be called a necessity if so many people can’t afford it?
+
 In a perfect world, one could live wherever they wanted.
 Spoiler alert, this world is far from perfect.
-Affordability isn’t just about price—it’s about access, opportunity, and fairness in everyday life.
+
+**Affordability isn’t just about price—it’s about access, opportunity, and fairness in everyday life.**
 
 But then again, you have NIMBY's who think their opinions matter more than others.
-![Nimby](data/mp02/NIMBY.png){fig-align="center" width=60%}
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+#| fig-align: center
+#| out.width: 70%
+knitr::include_graphics("data/mp02/NIMBY.png")
+```
 
-NIMBY's are my biggest opposition going back years. Unfortunately for them, I am here to evicerate them.
-With your help, we will be able to turn those N's into Y's and start the YIMBY epidemic
+NIMBY's are our biggest opposition going back years. Unfortunately for them, many of us, like myself, are here to evicerate them.
+With your help, we will be able to turn those N's into Y's and start the YIMBY epidemic.
 
-In the following page, I will show you my analysis into what a federal YIMBY-incentive program could look like. 
+In the following page, I will show findings about housing affordability in NYC. In addittion, we will dive into what a federal YIMBY-incentive program could look like. 
+
+First, we are going to familiarize ourselves with the data. Below, you will see the relationships between all of our data tables and how they can be related to one another.
 ```{r}
 #| echo: false
 #| message: false
@@ -285,68 +296,90 @@ get_bls_qcew_annual_averages <- function(start_year=2009, end_year=2023){
 WAGES <- get_bls_qcew_annual_averages()
 ```
 
-First, I want to show the data I will be using that will proivde some background knowledge to understand better what is happening around the country already.
-
-```{r}
-#| echo: false
-#| message: false
-#| warning: false
-library(stringr)
-
-CBSA_NAMES <- INCOME |>
-  select(GEOID, NAME) |>
-  distinct() |>
-  mutate(
-    CBSA = as.integer(GEOID)
-  )
-
-PERMITS_2010s <- PERMITS |>
-  filter(year >= 2010, year <= 2019) |>
-  group_by(CBSA) |>
-  summarize(
-    total_units_2010s = sum(new_housing_units_permitted, na.rm = TRUE),
-    .groups = "drop"
-  )
-
-PERMITS_2010s_named <- PERMITS_2010s |>
-  left_join(CBSA_NAMES, by = "CBSA") |>
-  select(CBSA, NAME, total_units_2010s)
-
-TOP_CBSA <- PERMITS_2010s_named |>
-  arrange(desc(total_units_2010s)) |>
-  slice(1)
-```
-
-The CBSA that permitted the largest number of new housing units between 2010 and 2019 was **`r TOP_CBSA$NAME`**.
-
-```{r}
-#| echo: false
-#| message: false
-#| warning: false
-library(DT)
-
-abq_by_year <- PERMITS |>
-filter(CBSA == 10740) |>
-group_by(year) |>
-summarize(
-total_units = sum(new_housing_units_permitted, na.rm = TRUE),
-.groups = "drop"
-) |>
-arrange(desc(total_units)) |>
-  slice_head(n = 5)
-
-DT::datatable(
-  abq_by_year,
-  caption = "Top 5 Years for New Housing Units Permitted in Albuquerque, NM (CBSA 10740)",
-  options = list(dom = 't', scrollX = TRUE) # 'dom = t' hides search/pagination
-)
-```
+Next, we will see some of the findings that were extracted from this data.
+To begin, we see the top 5 CBSA's that permitted the largest number of new housing in the 2010's.
 
 ```{r}
 #| echo: false
 #| message: false
 #| warning: false
 library(scales)
+
+CBSA_NAMES <- INCOME |>
+  filter(year == 2019) |>                
+  select(GEOID, NAME) |>
+  distinct() |>
+  mutate(CBSA = as.integer(GEOID))
+
+PERMITS_2010s <- PERMITS |>
+  filter(year >= 2010, year <= 2019) |>
+  group_by(CBSA) |>
+  summarize(
+    new_units = sum(new_housing_units_permitted, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+PERMITS_2010s_named <- PERMITS_2010s |>
+  left_join(CBSA_NAMES, by = "CBSA") |>
+  select(CBSA, NAME, new_units)
+
+TOP_CBSA <- PERMITS_2010s_named |>
+  arrange(desc(new_units)) |>
+  slice(1)
+
+TOP_5_CBSA <- PERMITS_2010s_named |>
+  arrange(desc(new_units)) |>
+  slice_head(n = 5)
+
+DT::datatable(
+  TOP_5_CBSA,
+  caption = "Top 5 CBSAs with the Most New Housing Units Permitted (2010–2019, using 2019 CBSA Names)",
+  options = list(dom = 't', scrollX = TRUE)
+)
+```
+
+As we can see, the CBSA that permitted the largest number of new housing units between 2010 and 2019 was `r TOP_CBSA$NAME`.
+
+Next, we'll take a look a CBSA 10740, located in Alburquerque, New Mexico and analyze their yearly addition of new housing units.
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+
+library(ggplot2)
+
+abq_by_year_full <- PERMITS |>
+  filter(CBSA == 10740) |>
+  group_by(year) |>
+  summarize(
+    total_units = sum(new_housing_units_permitted, na.rm = TRUE),
+    .groups = "drop"
+  ) |>
+  arrange(year)
+
+abq_peak <- abq_by_year_full |> slice_max(total_units, n = 1)
+
+ggplot(abq_by_year_full, aes(x = year, y = total_units)) +
+  geom_line(size = 1.2) +
+  geom_point(size = 3) +
+  scale_y_continuous(labels = comma) +
+  labs(
+    title = "New Units Permitted per Year in CBSA 10740",
+    x = "Year",
+    y = "New Housing Units Permitted"
+  ) +
+  theme_minimal(base_size = 14)
+```
+
+As shown in the graph above, the number of new housing units permitted were on a steady decline up until the COVID pandemic. Then, in 2021, CBSA 10740 had its highest number of new housing units permitted, with `r abq_peak$total_units` units.
+
+Next, we go over to look at average income per state, more specifically in the year 2015.
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+library(maps)
 
 state_df <- data.frame(
   abb  = c(state.abb, "DC", "PR"),
@@ -356,8 +389,10 @@ state_df <- data.frame(
 state_income_2015 <- INCOME |>
   filter(year == 2015) |>
   select(GEOID, NAME, household_income, year) |>
-  left_join(HOUSEHOLDS |> select(GEOID, households, year), by = c("GEOID", "year")) |>
-  left_join(POPULATION |> select(GEOID, population, year), by = c("GEOID", "year")) |>
+  left_join(HOUSEHOLDS |> select(GEOID, households, year),
+            by = c("GEOID", "year")) |>
+  left_join(POPULATION |> select(GEOID, population, year),
+            by = c("GEOID", "year")) |>
   mutate(
     total_income = household_income * households,
     state = str_extract(NAME, ", (.{2})") |> str_remove(", ")
@@ -366,28 +401,51 @@ state_income_2015 <- INCOME |>
   summarize(
     total_income_state = sum(total_income, na.rm = TRUE),
     total_population_state = sum(population, na.rm = TRUE),
-    avg_individual_income_num = total_income_state / total_population_state, 
+    avg_individual_income_num = total_income_state / total_population_state,
     .groups = "drop"
   ) |>
   left_join(state_df, by = c("state" = "abb")) |>
-  arrange(desc(avg_individual_income_num)) |>
-  slice_head(n = 5) |>
   mutate(
-    avg_individual_income = round(avg_individual_income_num, 2),
-    avg_individual_income = comma(avg_individual_income)
-  ) |>
-  select(
-    state_abbrev = state,
-    state_name = name,
-    avg_individual_income
+    state_name_lower = tolower(name) 
   )
 
-DT::datatable(
-  state_income_2015,
-  caption = "Top 5 States by Average Individual Income (2015)",
-  options = list(pageLength = 5, dom = 't')
-)
+us_map <- map_data("state")  
+us_map_income <- us_map |>
+  left_join(
+    state_income_2015,
+    by = c("region" = "state_name_lower")
+  )
 ```
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+#| fig-width: 14
+#| fig-height: 9
+#| out.width: "100%"
+#| fig-align: center
+ggplot(us_map_income, aes(long, lat, group = group, fill = avg_individual_income_num)) +
+  geom_polygon(color = "white", size = 0.2) +
+  coord_fixed(1.3) +
+  scale_fill_gradientn(
+    colors = c("darkred", "orange", "yellow", "lightgreen", "darkgreen"),
+    name = "Avg Individual Income ($)",
+    labels = scales::comma
+  ) +
+  labs(
+    title = "Average Individual Income by State (2015)",
+  ) +
+  theme_minimal(base_size = 22) +
+  theme(
+    legend.position = "right",
+    panel.grid = element_blank(),
+    axis.text = element_blank()
+  )
+```
+
+The map above shows all 50 states average income. However, it does not include additional US territories that are also included in the data. Therefore, more analysis has to be completed. That's when you figure out that DC had the highest average individual income for 2015, coming in at . Something, people in the government should be familiar too.
+
+Next findings show which CBSA had the most amount of data scientists in the last 5 years.
 ```{r}
 #| echo: false
 #| message: false
@@ -439,10 +497,11 @@ DT::datatable(
 nyc_last_year <- most_ds_per_year |>
   filter(str_detect(cbsa_name, regex("^New York", ignore_case = TRUE))) |>
   slice_max(order_by = YEAR, n = 1)
-
-nyc_last_year
 ```
 
+After taking a closer look at more previous years, you are able to find that `r nyc_last_year$YEAR` was the last year that the NYC CBSA led the country for data scientists.
+
+The last thing we take a look at initially, is the toal wages in the NYC CBSA. We look specifically into the wages that come from the finance and insurance industries to figure the percentage this is of the total wages.
 ```{r}
 #| echo: false
 #| message: false
@@ -459,8 +518,6 @@ nyc_wages <- WAGES |>
 # Find year of peak finance share
 nyc_peak <- nyc_wages |> slice_max(finance_share, n = 1)
 
-library(ggplot2)
-
 ggplot(nyc_wages, aes(x = YEAR, y = finance_share)) +
   geom_line(size = 1.2, color = "steelblue") +
   geom_point(size = 3, color = "darkred") +
@@ -473,3 +530,5 @@ ggplot(nyc_wages, aes(x = YEAR, y = finance_share)) +
   theme_minimal(base_size = 14)
 
 ```
+
+We look at various years to find no trend. However, we are able to find the peak in the year `r nyc_peak$YEAR`, with a `r nyc_peak$finance_share`%. 
