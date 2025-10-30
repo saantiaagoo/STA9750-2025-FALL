@@ -583,12 +583,17 @@ ggplot(cbsa_income_rent_2009,
   scale_y_continuous(labels = dollar_format()) +
   labs(
     title = "Monthly Rent vs. Monthly Household Income (2009)",
-    subtitle = "Each point is a CBSA",
     x = "Average Monthly Household Income (USD)",
-    y = "Median Gross Rent (USD, ACS B25064_001)"
+    y = "Median Gross Rent (USD)"
   ) +
   theme_minimal(base_size = 13)
 ```
+The visualization above shows us the relationship between monthly rent and average household income per CBSA in 2009.
+
+Each dot in the scatter plot refers to a different CBSA.
+
+As you could see, there is a positive correlation between the cost of rent and household income.
+
 ```{r}
 #| echo: false
 #| message: false
@@ -642,10 +647,9 @@ ggplot(
   geom_point(size = 2) +
   scale_y_continuous(labels = percent_format(accuracy = 0.1)) +
   labs(
-    title = "Health Care & Social Assistance Share of Total Employment",
-    subtitle = "Top 5 CBSAs by total employment (each label ends with 0)",
+    title = "Health Care&Social Services vs Total Employment",
     x = "Year",
-    y = "Health Sector Share of Total Employment",
+    y = "NAICS 62 Share of Total Employment",
     color = "CBSA"
   ) +
   theme_minimal(base_size = 13) +
@@ -654,6 +658,10 @@ ggplot(
     legend.position = "bottom"
   )
 ```
+The next visualization shows the relationship between total employment and total employment in the health care and social services sector across different the 5 CBSAs with the highest employment total.
+
+Over time, depending on the CBSA, the share is volatile and can either decrease or increase. The time where it mostly increases is in the year 2020, due to the COVID-19 pandemic.
+
 ```{r}
 #| echo: false
 #| message: false
@@ -699,7 +707,7 @@ ggplot(
   labs(
     title = "Evolution of Average Household Size Over Time",
     x = "Year",
-    y = "Average Household Size (Population ÷ Households)",
+    y = "Average Household Size",
     color = "CBSA"
   ) +
   theme_minimal(base_size = 13) +
@@ -708,3 +716,102 @@ ggplot(
     plot.title = element_text(face = "bold")
   )
 ```
+The third visualization is the evolution of the average household size over time. 
+
+We highlighted two specific CBSAs, the NY and LA, to take a closer look at the evolution.
+
+We can infer that the average household size, especially in those CBAs, has been steadily decreasing.
+
+The next two visualizations will have to deal with rent burden.
+
+We are going to create an rent-to-income ratio and compare the results around the CBSAs.
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+income_rent <- INCOME |>
+  select(GEOID, NAME, year, household_income) |>
+  left_join(
+    RENT |>
+      select(GEOID, NAME, year, monthly_rent),
+    by = c("GEOID", "NAME", "year")
+  ) |>
+  mutate(
+    cbsa_code = str_replace_all(GEOID, "[^0-9]", ""),
+    cbsa_name = str_remove(NAME, ",.*")
+  ) |>
+  filter(!is.na(household_income),
+         !is.na(monthly_rent),
+         household_income > 0,
+         monthly_rent > 0) |>
+  select(cbsa_code, cbsa_name, year, household_income, monthly_rent)
+
+income_rent <- income_rent |>
+  mutate(
+    rent_burden_raw = (12 * monthly_rent) / household_income
+  )
+
+# 3) Center & standardize for interpretability
+#    Center at 0.30 (30% benchmark), scale by 0.05 so ±1 ≈ ±5 percentage points
+income_rent <- income_rent |>
+  mutate(
+    rent_burden_std = (rent_burden_raw - 0.30) / 0.05
+  )
+nyc_rent_burden <- income_rent |>
+  filter(str_detect(cbsa_name, regex("New York", ignore_case = TRUE)))
+
+ggplot(nyc_rent_burden, aes(x = year, y = rent_burden_raw)) +
+  geom_line(color = "#1f78b4", linewidth = 1.2) +
+  geom_point(color = "#1f78b4", size = 2) +
+  geom_hline(yintercept = 0.30, linetype = "dashed", color = "red") +
+  scale_y_continuous(labels = percent_format(accuracy = 1)) +
+  labs(
+    title = "Rent Burden Over Time — New York CBSA",
+    x = "Year",
+    y = "Rent-to-Income Ratio",
+    caption = "Dashed red line = 30% affordability benchmark"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(plot.title = element_text(face = "bold"))
+```
+In the visualization above, we take a look at the rent burden in the CBSA in New York. To understand better, the dashed red line represents the 30% affordability benchmark.
+
+As you could see, despiite public perception, on average, the rent burden for New Yorkers tends to be lower than the benchmark.
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+latest_year <- max(income_rent$year, na.rm = TRUE)
+
+top_bottom_cbsas <- income_rent |>
+  filter(year == latest_year) |>
+  arrange(desc(rent_burden_raw)) |>
+  mutate(cbsa_name = str_trunc(cbsa_name, 40)) |>
+  slice_head(n = 10) |>
+  bind_rows(
+    income_rent |>
+      filter(year == latest_year) |>
+      arrange(rent_burden_raw) |>
+      slice_head(n = 10)
+  ) |>
+  mutate(
+    group = if_else(rent_burden_raw >= median(rent_burden_raw), "Highest", "Lowest")
+  )
+
+ggplot(top_bottom_cbsas, aes(x = reorder(cbsa_name, rent_burden_raw), y = rent_burden_raw, fill = group)) +
+  geom_col() +
+  coord_flip() +
+  scale_y_continuous(labels = percent_format(accuracy = 1)) +
+  scale_fill_manual(values = c("Highest" = "#e31a1c", "Lowest" = "#33a02c")) +
+  labs(
+    title = glue::glue("CBSAs & Rent Burdens ({latest_year})"),
+    x = "CBSA",
+    y = "Rent-to-Income Ratio",
+    fill = "Group"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(plot.title = element_text(face = "bold"))
+```
+The next visualization shows the rent burden in 2023 for CBSA's across the nation.
+
+We are highlighting the CBSA's with the highest and lowest rent burdens.
