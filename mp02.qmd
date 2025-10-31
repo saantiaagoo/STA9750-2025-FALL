@@ -523,7 +523,7 @@ nyc_last_year <- most_ds_per_year |>
 
 After taking a closer look at more previous years, you are able to find that `r nyc_last_year$YEAR` was the last year that the NYC CBSA led the country for data scientists.
 
-The last thing we take a look at initially, is the toal wages in the NYC CBSA. We look specifically into the wages that come from the finance and insurance industries to figure the percentage this is of the total wages.
+The last thing we take a look at initially, is the total wages in the NYC CBSA. We look specifically into the wages that come from the finance and insurance industries to figure the percentage this is of the total wages.
 ```{r}
 #| echo: false
 #| message: false
@@ -545,7 +545,7 @@ ggplot(nyc_wages, aes(x = YEAR, y = finance_share)) +
   geom_point(size = 3, color = "darkred") +
   scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
   labs(
-    title = "Share of Total NYC Wages Earned in Finance & Insurance (NAICS 52)",
+    title = "NYC Wages Earned in Finance & Insurance (NAICS 52)",
     x = "Year",
     y = "Finance Share of Total Wages"
   ) +
@@ -555,7 +555,7 @@ ggplot(nyc_wages, aes(x = YEAR, y = finance_share)) +
 
 We look at various years to find no trend. However, we are able to find the peak in the year `r nyc_peak$YEAR`, with about 5%.
 
-To keep on trend of familiriaty with the dataset, we will see more visualizations to show different types of relationships.
+To keep on the trend of familiriaty with the dataset, we will see more visualizations to show different types of relationships.
 ```{r}
 #| echo: false
 #| message: false
@@ -608,7 +608,6 @@ cbsa_crosswalk <- INCOME |>
   ) |>
   select(cbsa_code, cbsa_name)
 
-# 2. Summarize employment by CBSA + year
 cbsa_yearly <- WAGES |>
   mutate(
     cbsa_code = str_replace_all(FIPS, "[^0-9]", ""),
@@ -622,23 +621,20 @@ cbsa_yearly <- WAGES |>
   ) |>
   mutate(health_share = health_employment / total_employment)
 
-# 3. Find top 5 CBSAs (by total employment)
 top_cbsa_codes <- cbsa_yearly |>
   group_by(cbsa_code) |>
   summarize(total_emp_all_years = sum(total_employment, na.rm = TRUE), .groups = "drop") |>
   slice_max(total_emp_all_years, n = 5) |>
   pull(cbsa_code)
 
-# 4. Keep only top CBSAs and append “0” to their labels
 cbsa_focus <- cbsa_yearly |>
   filter(cbsa_code %in% top_cbsa_codes) |>
   left_join(cbsa_crosswalk, by = "cbsa_code") |>
   mutate(
     cbsa_label = if_else(is.na(cbsa_name), cbsa_code, cbsa_name),
-    cbsa_label = paste0(cbsa_label, "0")   # <-- adds a 0 at the end of each label
+    cbsa_label = paste0(cbsa_label, "0")   
   )
 
-# 5. Line plot
 ggplot(
   cbsa_focus,
   aes(x = YEAR, y = health_share, color = cbsa_label, group = cbsa_label)
@@ -815,3 +811,261 @@ ggplot(top_bottom_cbsas, aes(x = reorder(cbsa_name, rent_burden_raw), y = rent_b
 The next visualization shows the rent burden in 2023 for CBSA's across the nation.
 
 We are highlighting the CBSA's with the highest and lowest rent burdens.
+
+Next, we are going to look at housing growth within the CBSAs.
+
+We are going to construct two metrics, one will allow us to see the housing growth based on population of a CBSA and number of new housing units permitted for the year.
+
+The other metric will compare the housing permits to the population growth over a 5 year lookback windown.
+
+Lets first take a look at the first metric.
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+cbsa_housing <- POPULATION |>
+  select(GEOID, NAME, year, population) |>
+  mutate(cbsa_code = str_replace_all(GEOID, "[^0-9]", ""),
+         cbsa_name = str_remove(NAME, ",.*")) |>
+  left_join(
+    PERMITS |>
+      mutate(cbsa_code = as.character(CBSA)) |>
+      select(cbsa_code, year, new_housing_units_permitted),
+    by = c("cbsa_code", "year")
+  ) |>
+  filter(!is.na(population), !is.na(new_housing_units_permitted))
+
+cbsa_housing <- cbsa_housing |>
+  group_by(cbsa_code) |>
+  arrange(cbsa_code, year) |>
+  mutate(
+    population_lag5 = lag(population, 5),
+    pop_growth_5yr = population - population_lag5
+  ) |>
+  ungroup()
+
+cbsa_housing <- cbsa_housing |>
+  mutate(
+    housing_growth_instant = new_housing_units_permitted / population,
+
+    housing_growth_rate = if_else(pop_growth_5yr > 0,
+                                  new_housing_units_permitted / pop_growth_5yr,
+                                  NA_real_)
+  )
+
+cbsa_housing <- cbsa_housing |>
+  mutate(
+    housing_growth_instant_std = (housing_growth_instant - mean(housing_growth_instant, na.rm = TRUE)) /
+                                 sd(housing_growth_instant, na.rm = TRUE),
+    housing_growth_rate_std = (housing_growth_rate - mean(housing_growth_rate, na.rm = TRUE)) /
+                              sd(housing_growth_rate, na.rm = TRUE)
+  )
+top_instant <- cbsa_housing |>
+  filter(!is.na(housing_growth_instant_std)) |>
+  arrange(desc(housing_growth_instant_std)) |>
+  distinct(cbsa_code, cbsa_name, .keep_all = TRUE) |>
+  slice_head(n = 10) |>
+  select(cbsa_code, cbsa_name, year, housing_growth_instant_std)
+
+bottom_instant <- cbsa_housing |>
+  filter(!is.na(housing_growth_instant_std)) |>
+  arrange(housing_growth_instant_std) |>
+  distinct(cbsa_code, cbsa_name, .keep_all = TRUE) |>
+  slice_head(n = 10) |>
+  select(cbsa_code, cbsa_name, year, housing_growth_instant_std)
+
+top_rate <- cbsa_housing |>
+  filter(!is.na(housing_growth_rate_std)) |>
+  arrange(desc(housing_growth_rate_std)) |>
+  distinct(cbsa_code, cbsa_name, .keep_all = TRUE) |>
+  slice_head(n = 10) |>
+  select(cbsa_code, cbsa_name, year, housing_growth_rate_std)
+
+bottom_rate <- cbsa_housing |>
+  filter(!is.na(housing_growth_rate_std)) |>
+  arrange(housing_growth_rate_std) |>
+  distinct(cbsa_code, cbsa_name, .keep_all = TRUE) |>
+  slice_head(n = 10) |>
+  select(cbsa_code, cbsa_name, year, housing_growth_rate_std)
+
+DT::datatable(top_instant,
+          caption = "Top 10 CBSAs by Instantaneous Housing Growth (Standardized)",
+          options = list(pageLength = 10))
+
+DT::datatable(bottom_instant,
+          caption = "Bottom 10 CBSAs by Instantaneous Housing Growth (Standardized)",
+          options = list(pageLength = 10))
+```
+After coming up with our metric, we are able to separate the top 10 and bottom 10 CBSA's in terms of instantaneous housing growth.
+ 
+Next, we will take a look at the second metric.
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+DT::datatable(top_rate,
+          caption = "Top 10 CBSAs by Rate-Based Housing Growth (Standardized)",
+          options = list(pageLength = 10))
+
+DT::datatable(bottom_rate,
+          caption = "Bottom 10 CBSAs by Rate-Based Housing Growth (Standardized)",
+          options = list(pageLength = 10))
+```
+After coming up with our second metric, we are able to separate the top 10 and bottom 10 CBSA's in terms of rate-based housing growth.
+
+The last metric we will take a look is a composite score that combines the first two metrics.
+
+Once we figured out the metric, we are going to identify the CBSA's that do well and poor with this measure
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+#| include: true
+
+library(dplyr)
+library(stringr)
+library(scales)
+library(DT)
+library(slider)  # <-- use slider for safe rolling means
+
+# 1) Join POPULATION and PERMITS at CBSA + year
+cbsa_housing <- POPULATION |>
+  select(GEOID, NAME, year, population) |>
+  mutate(
+    cbsa_code = str_replace_all(GEOID, "[^0-9]", ""),
+    cbsa_name = str_remove(NAME, ",.*")
+  ) |>
+  left_join(
+    PERMITS |>
+      mutate(cbsa_code = as.character(CBSA)) |>
+      select(cbsa_code, year, new_housing_units_permitted),
+    by = c("cbsa_code", "year")
+  ) |>
+  filter(!is.na(population), !is.na(new_housing_units_permitted)) |>
+  arrange(cbsa_code, year)
+
+# 2) 5-year lookback population using lag() within CBSA
+cbsa_housing <- cbsa_housing |>
+  group_by(cbsa_code) |>
+  mutate(
+    population_lag5 = lag(population, 5),
+    pop_growth_5yr  = population - population_lag5
+  ) |>
+  ungroup()
+
+# 3) Construct the two housing-growth metrics
+cbsa_housing <- cbsa_housing |>
+  mutate(
+    # Instantaneous: permits per person this year
+    housing_growth_instant = new_housing_units_permitted / population,
+
+    # Rate-based: permits per *incremental* resident over prior 5 years
+    housing_growth_rate = if_else(
+      !is.na(pop_growth_5yr) & pop_growth_5yr > 0,
+      new_housing_units_permitted / pop_growth_5yr,
+      NA_real_
+    )
+  )
+
+# 4) Standardize (z-score) both metrics across all CBSA-years
+cbsa_housing <- cbsa_housing |>
+  mutate(
+    housing_growth_instant_std = (housing_growth_instant - mean(housing_growth_instant, na.rm = TRUE)) /
+                                 sd(housing_growth_instant, na.rm = TRUE),
+    housing_growth_rate_std    = (housing_growth_rate    - mean(housing_growth_rate,    na.rm = TRUE)) /
+                                 sd(housing_growth_rate,    na.rm = TRUE)
+  )
+
+# 5) Composite score (equal-weighted) + standardized composite
+cbsa_housing <- cbsa_housing |>
+  mutate(
+    housing_growth_composite = 0.5 * housing_growth_instant_std +
+                               0.5 * housing_growth_rate_std,
+    housing_growth_composite_std = (housing_growth_composite - mean(housing_growth_composite, na.rm = TRUE)) /
+                                   sd(housing_growth_composite, na.rm = TRUE)
+  )
+
+# 6) Rolling 5-year averages (current year + previous 4) for standardized scores
+#    Use slider so short series return NA instead of error; .complete=TRUE requires full 5.
+cbsa_housing <- cbsa_housing |>
+  group_by(cbsa_code) |>
+  arrange(cbsa_code, year) |>
+  mutate(
+    housing_growth_instant_roll5   = slide_dbl(housing_growth_instant_std, mean, .before = 4, .complete = TRUE, na.rm = TRUE),
+    housing_growth_rate_roll5      = slide_dbl(housing_growth_rate_std,    mean, .before = 4, .complete = TRUE, na.rm = TRUE),
+    housing_growth_composite_roll5 = slide_dbl(housing_growth_composite_std, mean, .before = 4, .complete = TRUE, na.rm = TRUE)
+  ) |>
+  ungroup()
+
+# 7) Top/Bottom tables (use the latest year to avoid duplicate CBSAs)
+latest_year <- max(cbsa_housing$year, na.rm = TRUE)
+
+top_instant <- cbsa_housing |>
+  filter(year == latest_year, !is.na(housing_growth_instant_std)) |>
+  arrange(desc(housing_growth_instant_std)) |>
+  slice_head(n = 10) |>
+  select(cbsa_code, cbsa_name, year, housing_growth_instant_std)
+
+bottom_instant <- cbsa_housing |>
+  filter(year == latest_year, !is.na(housing_growth_instant_std)) |>
+  arrange(housing_growth_instant_std) |>
+  slice_head(n = 10) |>
+  select(cbsa_code, cbsa_name, year, housing_growth_instant_std)
+
+top_rate <- cbsa_housing |>
+  filter(year == latest_year, !is.na(housing_growth_rate_std)) |>
+  arrange(desc(housing_growth_rate_std)) |>
+  slice_head(n = 10) |>
+  select(cbsa_code, cbsa_name, year, housing_growth_rate_std)
+
+bottom_rate <- cbsa_housing |>
+  filter(year == latest_year, !is.na(housing_growth_rate_std)) |>
+  arrange(housing_growth_rate_std) |>
+  slice_head(n = 10) |>
+  select(cbsa_code, cbsa_name, year, housing_growth_rate_std)
+
+top_composite <- cbsa_housing |>
+  filter(year == latest_year, !is.na(housing_growth_composite_std)) |>
+  arrange(desc(housing_growth_composite_std)) |>
+  slice_head(n = 10) |>
+  select(cbsa_code, cbsa_name, year, housing_growth_composite_std)
+
+bottom_composite <- cbsa_housing |>
+  filter(year == latest_year, !is.na(housing_growth_composite_std)) |>
+  arrange(housing_growth_composite_std) |>
+  slice_head(n = 10) |>
+  select(cbsa_code, cbsa_name, year, housing_growth_composite_std)
+
+# 8) Display the tables
+datatable(top_instant,
+          caption = glue::glue("Top 10 CBSAs by Instantaneous Housing Growth (Std) — {latest_year}"),
+          options = list(pageLength = 10))
+
+datatable(bottom_instant,
+          caption = glue::glue("Bottom 10 CBSAs by Instantaneous Housing Growth (Std) — {latest_year}"),
+          options = list(pageLength = 10))
+
+datatable(top_rate,
+          caption = glue::glue("Top 10 CBSAs by Rate-Based Housing Growth (Std) — {latest_year}"),
+          options = list(pageLength = 10))
+
+datatable(bottom_rate,
+          caption = glue::glue("Bottom 10 CBSAs by Rate-Based Housing Growth (Std) — {latest_year}"),
+          options = list(pageLength = 10))
+
+datatable(top_composite,
+          caption = glue::glue("Top 10 CBSAs by Composite Housing Growth (Std) — {latest_year}"),
+          options = list(pageLength = 10))
+
+datatable(bottom_composite,
+          caption = glue::glue("Bottom 10 CBSAs by Composite Housing Growth (Std) — {latest_year}"),
+          options = list(pageLength = 10))
+
+```
+As you could see above.
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+```
