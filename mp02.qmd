@@ -22,7 +22,7 @@ knitr::include_graphics("data/mp02/NIMBY.png")
 NIMBY's are our biggest opposition going back years. Unfortunately for them, many of us, like myself, are here to evicerate them.
 With your help, we will be able to turn those N's into Y's and start the YIMBY epidemic.
 
-In the following page, I will show findings about housing affordability in NYC. In addittion, we will dive into what a federal YIMBY-incentive program could look like. 
+In the following page, I will show findings about housing affordability in NYC. In addittion, we will dive into what a federal YIMBY-incentive program could look like. At the end, I will introduce an new bill that will change the landscape of affordable housing for future generations.
 
 First, we are going to familiarize ourselves with the data will be using. Below, you will see the relationships between all of our data tables and how they can be related to one another.
 ```{r}
@@ -305,8 +305,8 @@ get_bls_qcew_annual_averages <- function(start_year=2009, end_year=2023){
 WAGES <- get_bls_qcew_annual_averages()
 ```
 
-Next, we will see some of the findings that were extracted from this data.
-To begin, we see the top 5 CBSA's that permitted the largest number of new housing in the 2010's.
+Next, we will see some of the findings that we can extract from this data.
+To begin, we seek out the top 5 CBSAs that permitted the largest number of new housing in the 2010's.
 
 ```{r}
 #| echo: false
@@ -347,7 +347,7 @@ DT::datatable(
 )
 ```
 
-As we can see, the CBSA that permitted the largest number of new housing units between 2010 and 2019 was `r TOP_CBSA$NAME`.
+As we can see, the CBSA that permitted the largest number of new housing units between 2010 and 2019 was CBSA in `r TOP_CBSA$NAME`.
 
 Next, we'll take a look a CBSA 10740, located in Alburquerque, New Mexico and analyze their yearly addition of new housing units.
 
@@ -453,11 +453,7 @@ plot_usmap(
     fill = "Income (USD)"
   ) +
   theme(legend.position = "right")
-```
-```{r}
-#| echo: false
-#| message: false
-#| warning: false
+
 highest_income_state <- state_income_2015 |>
   slice_max(avg_individual_income_num, n = 1) |>
   mutate(
@@ -465,6 +461,7 @@ highest_income_state <- state_income_2015 |>
   ) |>
   select(state_full, avg_income_dollar)
 ```
+
 The map above shows all 50 states average income. However, it does not include additional US territories that are also included in the data. Therefore, more analysis has to be completed. That's when you figure out that the `r highest_income_state$state_full` had the highest average individual income for 2015, coming in at `r highest_income_state$avg_income_dollar`. Something, people in the government should be familiar too.
 
 Next findings show which CBSA had the most amount of data scientists in the last 5 years.
@@ -521,7 +518,7 @@ nyc_last_year <- most_ds_per_year |>
   slice_max(order_by = YEAR, n = 1)
 ```
 
-After taking a closer look at more previous years, you are able to find that `r nyc_last_year$YEAR` was the last year that the NYC CBSA led the country for data scientists.
+In 4 out of the last 5 years, San Francisco has had the most data scientists. To get a better understanding of these part of the data, I wanted to see the NYC CBSA and if they have ever had the most data scientists. After taking a closer look at more previous years, you are able to find that `r nyc_last_year$YEAR` was the last year that the NYC CBSA led the country for data scientists.
 
 The last thing we take a look at initially, is the total wages in the NYC CBSA. We look specifically into the wages that come from the finance and insurance industries to figure the percentage this is of the total wages.
 ```{r}
@@ -553,7 +550,7 @@ ggplot(nyc_wages, aes(x = YEAR, y = finance_share)) +
 
 ```
 
-We look at various years to find no trend. However, we are able to find the peak in the year `r nyc_peak$YEAR`, with about 5%.
+We look at various years to find no trend. However, we are able to find the peak in the year `r nyc_peak$YEAR`, with about 5% share of the total wages for the CBSA for the year.
 
 To keep on the trend of familiriaty with the dataset, we will see more visualizations to show different types of relationships.
 ```{r}
@@ -714,7 +711,7 @@ ggplot(
 ```
 The third visualization is the evolution of the average household size over time. 
 
-We highlighted two specific CBSAs, the NY and LA, to take a closer look at the evolution.
+We highlighted two specific CBSAs, the NY and LA ones, to take a closer look at the evolution.
 
 We can infer that the average household size, especially in those CBAs, has been steadily decreasing.
 
@@ -747,31 +744,33 @@ income_rent <- income_rent |>
     rent_burden_raw = (12 * monthly_rent) / household_income
   )
 
-#    Center at 0.30 (30% benchmark), scale by 0.05 so ±1 ≈ ±5 percentage points
 income_rent <- income_rent |>
   mutate(
     rent_burden_std = (rent_burden_raw - 0.30) / 0.05
   )
-nyc_rent_burden <- income_rent |>
-  filter(str_detect(cbsa_name, regex("New York", ignore_case = TRUE)))
 
-ggplot(nyc_rent_burden, aes(x = year, y = rent_burden_raw)) +
+miami_rent_burden <- income_rent |>
+  filter(cbsa_code %in% c("33100", "33124"))
+
+ggplot(miami_rent_burden, aes(x = year, y = rent_burden_raw)) +
   geom_line(color = "#1f78b4", linewidth = 1.2) +
   geom_point(color = "#1f78b4", size = 2) +
   geom_hline(yintercept = 0.30, linetype = "dashed", color = "red") +
-  scale_y_continuous(labels = percent_format(accuracy = 1)) +
+  scale_y_continuous(
+  breaks = seq(0.2775, 0.30, by = 0.0025),   
+  labels = scales::label_percent(accuracy = 0.01) 
+) +
   labs(
-    title = "Rent Burden Over Time — New York CBSA",
+    title = "Rent Burden Over Time — Miami CBSAs",
     x = "Year",
     y = "Rent-to-Income Ratio",
-    caption = "Dashed red line = 30% affordability benchmark"
   ) +
   theme_minimal(base_size = 13) +
   theme(plot.title = element_text(face = "bold"))
 ```
-In the visualization above, we take a look at the rent burden in the CBSA in New York. To understand better, the dashed red line represents the 30% affordability benchmark.
+In the visualization above, we take a look at the rent burden in the CBSAs (33100 + 33124) in the Miami metro area. To understand better, the dashed red line represents the 30% affordability benchmark.
 
-As you could see, despite public perception, on average, the rent burden for New Yorkers tends to be lower than the benchmark.
+As you could see, the rent burden for South Floridians has been on an exponential rise post pandemic.
 ```{r}
 #| echo: false
 #| message: false
@@ -809,13 +808,13 @@ ggplot(top_bottom_cbsas, aes(x = reorder(cbsa_name, rent_burden_raw), y = rent_b
 ```
 The next visualization shows the rent burden in 2023 for CBSA's across the nation.
 
-We are highlighting the CBSA's with the highest and lowest rent burdens.
+We are highlighting the CBSAs with the highest and lowest rent burdens.
+
+To stay with the trend from the first rent-burden visual, one can assume that the rent burden in the entire state of Florida is increasing in all areas of the region.
 
 Next, we are going to look at housing growth within the CBSAs.
 
-We are going to construct two metrics, one will allow us to see the housing growth based on population of a CBSA and number of new housing units permitted for the year.
-
-The other metric will compare the housing permits to the population growth over a 5 year lookback windown.
+We are going to construct two metrics; one will allow us to see the housing growth based on population of a CBSA and number of new housing units permitted for the year. The other metric will compare the housing permits to the population growth over a 5 year lookback windown.
 
 Lets first take a look at the first metric.
 ```{r}
@@ -858,20 +857,30 @@ cbsa_housing <- cbsa_housing |>
       NA_real_
     )
   )
+
 cbsa_housing <- cbsa_housing |>
   mutate(
-    housing_growth_instant_std = (housing_growth_instant - mean(housing_growth_instant, na.rm = TRUE)) /
-                                 sd(housing_growth_instant, na.rm = TRUE),
-    housing_growth_rate_std    = (housing_growth_rate    - mean(housing_growth_rate,    na.rm = TRUE)) /
-                                 sd(housing_growth_rate,    na.rm = TRUE)
+    housing_growth_instant_std = round(
+      (housing_growth_instant - mean(housing_growth_instant, na.rm = TRUE)) /
+      sd(housing_growth_instant, na.rm = TRUE),
+      4
+    ),
+    housing_growth_rate_std = round(
+      (housing_growth_rate - mean(housing_growth_rate, na.rm = TRUE)) /
+      sd(housing_growth_rate, na.rm = TRUE),
+      4
+    )
   )
 
 cbsa_housing <- cbsa_housing |>
   mutate(
     housing_growth_composite = 0.5 * housing_growth_instant_std +
                                0.5 * housing_growth_rate_std,
-    housing_growth_composite_std = (housing_growth_composite - mean(housing_growth_composite, na.rm = TRUE)) /
-                                   sd(housing_growth_composite, na.rm = TRUE)
+    housing_growth_composite_std = round(
+      (housing_growth_composite - mean(housing_growth_composite, na.rm = TRUE)) /
+      sd(housing_growth_composite, na.rm = TRUE),
+      4
+    )
   )
 
 cbsa_housing <- cbsa_housing |>
@@ -930,7 +939,13 @@ DT::datatable(bottom_instant,
           caption = glue::glue("Bottom 10 CBSAs by Instantaneous Housing Growth (Std) — {latest_year}"),
           options = list(pageLength = 10))
 ```
-After coming up with our metric, we are able to separate the top 10 and bottom 10 CBSA's in terms of instantaneous housing growth.
+After coming up with our metric, we are able to separate the top 10 and bottom 10 CBSA's in terms of instantaneous housing growth. 
+
+To explain in English terms, lets take a look at the first table. 
+
+Myrtle Beach CBSA was one of the most construction-intensive metros in the entire country in 2023 — building new housing far faster than typical cities its size. (Over nine standard deviations above the national average)
+
+In contrast in the second table, we can see see that the Decatur CBSA built noticeably fewer new homes per resident than most U.S. metro areas — about one standard deviation below average.
  
 Next, we will take a look at the second metric.
 
@@ -948,9 +963,13 @@ DT::datatable(bottom_rate,
 ```
 After coming up with our second metric, we are able to separate the top 10 and bottom 10 CBSA's in terms of rate-based housing growth.
 
+To explain better, we can see that in 2023, the Springfield CBSA had a housing_growth_rate_std of +2.1026, meaning it was building housing at a rate significantly higher than most U.S. metro areas relative to its recent population growth.
+
+Now on the other side of the spectrum, in 2023, the Manhattan CBSA had a housing_growth_rate_std of −0.141, meaning it was very close to the national average, with just a slight tendency to underbuild relative to population growth.
+
 The last metric we will take a look is a composite score that combines the first two metrics.
 
-Once we figured out the metric, we are going to identify the CBSA's that do well and poor with this measure.
+Once we figured out the metric, we are going to identify the CBSA's that do well and poor with this measure. This will give us an idea to the Metro areas that are most YIMBY friendly.
 ```{r}
 #| echo: false
 #| message: false
@@ -963,7 +982,15 @@ DT::datatable(bottom_composite,
           caption = glue::glue("Bottom 10 CBSAs by Composite Housing Growth (Std) — {latest_year}"),
           options = list(pageLength = 10))
 ```
-As you could see above.
+Therefore, in 2023, the Punta Gorda CBSA had a housing_growth_composite_std of +3.5413, meaning its overall pace of housing development was exceptionally strong.
+
+That makes Punta Gorda one of the most construction-active metros in the country when you consider both its raw building rate and how well housing supply is keeping up with population growth.
+
+On the other hand, in 2023, the Morgantown CBSA had a housing_growth_composite_std of −1.137, meaning its overall housing growth pace was moderately below the national average.
+
+A value of −1.14 indicates Morgantown’s combined housing indicators — both how much it’s building and how well it’s keeping up with population growth — were a little over one standard deviation below what’s typical across U.S. metros.
+
+The last thing we'll do before we introduce the bill is to visualize the relationship between our Rent Burden and Housing Growth metrics.
 
 ```{r}
 #| echo: false
@@ -971,26 +998,17 @@ As you could see above.
 #| warning: false
 #| include: true
 
-library(dplyr)
-library(stringr)
-library(ggplot2)
-library(scales)
 library(ggrepel)
 
-# ---- assume income_rent and cbsa_housing exist as in prior chunk ----
-# If not, you can reuse the "self-contained" build I sent earlier.
-
-# 1) Join and FIX the duplicate cbsa_name columns
 cbsa_merged <- inner_join(
-  income_rent,                                             # cbsa_code, cbsa_name, year, rent_burden_raw
-  cbsa_housing,                                            # cbsa_code, cbsa_name, year, population, housing_growth_composite_std
+  income_rent,                                             
+  cbsa_housing,                                            
   by = c("cbsa_code","year"),
   suffix = c(".rent", ".house")
 ) %>%
   mutate(cbsa_name = coalesce(cbsa_name.rent, cbsa_name.house)) %>%
   select(cbsa_code, cbsa_name, year, rent_burden_raw, population, housing_growth_composite_std)
 
-# Dynamic windows for start/end (first/last 3 years present)
 min_y <- min(cbsa_merged$year, na.rm = TRUE)
 max_y <- max(cbsa_merged$year, na.rm = TRUE)
 start_years <- seq(min_y, min(min_y + 2, max_y))
@@ -1019,7 +1037,6 @@ cbsa_summary <- cbsa_merged %>%
   )
 num_si <- scales::label_number(scale_cut = scales::cut_short_scale())
 
-# --- 1️⃣ Scatter — All CBSAs ---
 cbsa_summary_simple <- cbsa_merged |>
   group_by(cbsa_code, cbsa_name) |>
   summarize(
@@ -1044,8 +1061,17 @@ ggplot(cbsa_summary_simple,
   theme_minimal(base_size = 13) +
   theme(plot.title = element_text(face = "bold"),
         legend.position = "bottom")
+```
+In the scatter plot above, we are trying to interpret if there is any correlation between average rent burden and average housing growth while also trying to show the size of population of each CBSA. 
 
-# --- 2️⃣ Line Graph — New York CBSA Only (code 35620) ---
+Each dot in the scatter plot represents a different CBSA.
+
+Unfortunately, we do not see any correlation between the two. 
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+#| include: true
 ny_code <- "35620"
 
 ny_data <- cbsa_merged |>
@@ -1057,18 +1083,14 @@ ny_data <- cbsa_merged |>
     .groups = "drop"
   )
 
-# --- Visualization: NYC (2014–2018) ---
 ggplot(ny_data, aes(x = year)) +
-  # Solid line = rent burden
   geom_line(aes(y = rent_burden * 100, color = "Rent Burden"), linewidth = 1.3) +
-  # Dashed line = housing growth (true standardized values)
   geom_line(aes(y = housing_growth, color = "Housing Growth"), linewidth = 1.3, linetype = "dashed") +
   
-  # Custom Y-axis range and breaks
   scale_y_continuous(
-    name = "Rent Burden (% of Income Spent on Rent)",
-    limits = c(-10, 30),                      # y-axis from −10 to 30
-    breaks = seq(-10, 30, by = 10),           # ticks at −10, 0, 10, 20, 30
+    name = "Rent Burden %",
+    limits = c(-10, 30),                      
+    breaks = seq(-10, 30, by = 10),           
     sec.axis = sec_axis(~ ., name = "Housing Growth (Standardized)")
   ) +
   
@@ -1078,7 +1100,6 @@ ggplot(ny_data, aes(x = year)) +
   ) +
   labs(
     title = "Rent Burden and Housing Growth — New York CBSA (35620)",
-    subtitle = "Solid = Rent Burden; Dashed = Housing Growth (true standardized scale)",
     x = "Year"
   ) +
   theme_minimal(base_size = 13) +
@@ -1086,8 +1107,24 @@ ggplot(ny_data, aes(x = year)) +
     plot.title = element_text(face = "bold"),
     legend.position = "bottom"
   )
+```
+In the line graph above, we spotlight the CBSA in New York (35620) to show the similarities between the trend of both their rent burden and housing growth from 2014 to 2018.
 
-# === VIS C: YIMBY identification (unchanged, now works with fixed names) ===
+As you can see, you may be able to see that trend for both metrics follow similar paths. However, it is not clear to show that they both follow the same trends.
+
+The last visualization we are going to see is to search which CBSAs identify as the most YIMBY.
+
+To determine, we have 4 criteria that each has to meet:
+- had relatively high rent burden in the early part of the study period
+- have had a decrease in rent burden over the study period
+- have had population growth over the study period
+- have had above-average housing growth during the study period
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+#| include: true
 rb_start_med <- median(cbsa_summary$rent_burden_start, na.rm = TRUE)
 
 cbsa_summary <- cbsa_summary %>%
@@ -1114,11 +1151,9 @@ ggplot(cbsa_summary,
     size = 3, max.overlaps = 15, box.padding = 0.3
   ) +
   scale_color_manual(values = c(`TRUE` = "#1b9e77", `FALSE` = "gray70"),
-                     name = "YIMBY Candidate") +
+                     name = "YIMBY") +
   labs(
     title = "Identifying “YIMBY” CBSAs",
-    subtitle = sprintf("Start window: %s–%s | End window: %s–%s",
-                       min(start_years), max(start_years), min(end_years), max(end_years)),
     x = "Change in Rent Burden (end − start)",
     y = "Average Housing Growth (standardized)"
   ) +
@@ -1126,30 +1161,57 @@ ggplot(cbsa_summary,
   theme(plot.title = element_text(face = "bold"))
 
 ```
-##Federal “Build Homes Where People Need Them” Act##
+From the visual above, we get the list below of CBSAs that are most YIMBY. In total, it is 27 CBSAs.
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+rb_start_med <- median(cbsa_summary$rent_burden_start, na.rm = TRUE)
 
-#The Challenge#
+cbsa_summary <- cbsa_summary %>%
+  mutate(
+    yimby_flag = (rent_burden_start > rb_start_med) &
+                 (rent_burden_change < 0) &
+                 (pop_growth > 0) &
+                 (housing_growth_mean > 0)
+  )
+
+yimby_list <- cbsa_summary %>%
+  filter(yimby_flag) %>%
+  arrange(desc(housing_growth_mean)) %>%
+  pull(cbsa_name)
+
+yimby_list
+```
+
+Now that we study the data extensively, it is time to have a call to action.
+
+It is my honor to introduce the bill below.
+
+## Federal “Build Homes Where People Need Them” Act
+
+# The Challenge
 Across the United States, families are spending more on rent than ever before. In many metropolitan areas, housing supply has failed to keep up with population growth. This shortage drives up rents, limits household mobility, and increases the cost of living for working families. At the same time, the lack of new housing construction strains local labor markets, especially in essential sectors such as education and health care.
 
-#The Proposal#
+# The Proposal
 The Build Homes Where People Need Them Act would create a federal incentive program that rewards local governments for adopting pro-housing reforms—streamlining zoning, permitting, and approvals while protecting renters and aligning infrastructure investment with growth. Cities that make it easier to build homes near jobs and transit would be eligible for competitive federal grants that help finance infrastructure, workforce housing, and mixed-income development.
 
-#Identifying the Right Sponsors#
+# Identifying the Right Sponsors
 To ensure bipartisan appeal and geographic balance, the bill should have two lead sponsors. The primary sponsor should represent a metropolitan area that has demonstrated “YIMBY success”—a city that once faced high rent burdens but has seen improvement due to robust housing development and population growth. This sponsor can credibly claim that a pro-housing approach works in practice.
 The co-sponsor should represent a metro that continues to experience high rent burdens and limited new development. Their support underscores the urgency for national assistance to unlock stalled local housing markets.
 
-#Building Broad Support#
+#Building Broad Support
 A successful housing reform coalition requires allies with direct economic stakes in affordable housing. Two especially relevant groups are health-care professionals and public-sector workers such as teachers and first responders. Both face challenges finding housing near their workplaces. By encouraging new development, this bill would reduce commute times, improve retention, and expand disposable income—benefiting not only these workers but also the broader local economy.
 
-#Measuring Success#
+#Measuring Success
 Our approach uses two intuitive, transparent indicators to guide funding and accountability:
 
 Rent Burden: The share of a typical household’s income spent on rent, standardized around a 30% benchmark. A value near zero indicates an average burden, while positive values signal affordability stress.
 
 Housing Growth: A composite of two measures—new housing permits relative to total population, and permits relative to five-year population growth. This captures both current construction intensity and whether cities are building fast enough to keep pace with demand.
 
-#Why This Bill Matters#
+#Why This Bill Matters
 Cities that build homes relieve pressure on rents, support workforce stability, and improve local competitiveness. For high-rent areas, federal support can help overcome regulatory inertia and spur equitable growth. By linking funding to measurable outcomes, this bill ensures accountability and rewards communities that act to make housing affordable again.
 
-#Conclusion#
+#Conclusion
 The Build Homes Where People Need Them Act offers a pragmatic, bipartisan solution to the housing crisis. It combines data-driven metrics, local flexibility, and tangible incentives for reform—empowering both fast-growing and housing-constrained cities to deliver the homes American families need.
