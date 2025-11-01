@@ -1,0 +1,31 @@
+---
+title: "The “Rebuild the American Dream Act”"
+format: html
+---
+# The Challenge
+Across thecountry, families are spending more on rent than ever before. In many metropolitan areas, housing supply has failed to keep up with population growth. This shortage drives up rents, limits household mobility, and increases the cost of living for working families. At the same time, the lack of new housing construction strains local labor markets, especially in essential sectors such as education and health care.
+
+# The Proposal
+The Rebuild the American Dream Ac Act would create a federal incentive program that rewards local governments for adopting pro-housing reforms. The goal is to protect renters and align infrastructure investment with growth. Cities that make it easier to build homes near jobs and transit would be eligible for competitive federal grants that help finance infrastructure, workforce housing, and mixed-income development.
+
+# Sponsorship
+To ensure bipartisan appeal and geographic balance, this bill has two leading sponsors. The primary sponsor is the representative from Cleveland, Ohio. The co-sponsor of the bill is the representative from Manhattan, NY. With the help from them, we have representation from both NIMBY and YIMBY metro areas.
+
+# Additional Support
+A successful housing reform coalition requires people with direct economic stakes in affordable housing. Two especially relevant groups are health-care professionals and teachers. Both face challenges finding housing near their workplaces. By encouraging new development, this bill would reduce commute times, improve retention, and expand disposable income—benefiting not only these workers but also the broader local economy.
+
+# Metrics
+Our approach uses two intuitive, transparent indicators to guide funding and accountability:
+
+Rent Burden: The share of a typical household’s income spent on rent, standardized around a 30% benchmark. A value near zero indicates an average burden, while positive values signal affordability stress.
+
+Housing Growth: A composite of two measures—new housing permits relative to total population, and permits relative to five-year population growth. This captures both current construction intensity and whether cities are building fast enough to keep pace with demand.
+
+# Importance
+Cities that build homes relieve pressure on rents, support workforce stability, and improve local competitiveness. For high-rent areas, federal support can help overcome regulatory inertia and spur equitable growth. By linking funding to measurable outcomes, this bill ensures accountability and rewards communities that act to make housing affordable again.
+
+# Conclusion
+The Rebuild the American Dream Act offers a pragmatic, bipartisan solution to the housing crisis. It combines data-driven metrics, local flexibility, and tangible incentives for reform—empowering both fast-growing and housing-constrained cities to deliver the homes American families need.
+
+--------------
+Last Updated: `r format(Sys.time(), "%A %m %d, %Y at %H:%M%p")`
