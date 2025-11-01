@@ -747,7 +747,6 @@ income_rent <- income_rent |>
     rent_burden_raw = (12 * monthly_rent) / household_income
   )
 
-# 3) Center & standardize for interpretability
 #    Center at 0.30 (30% benchmark), scale by 0.05 so ±1 ≈ ±5 percentage points
 income_rent <- income_rent |>
   mutate(
@@ -772,7 +771,7 @@ ggplot(nyc_rent_burden, aes(x = year, y = rent_burden_raw)) +
 ```
 In the visualization above, we take a look at the rent burden in the CBSA in New York. To understand better, the dashed red line represents the 30% affordability benchmark.
 
-As you could see, despiite public perception, on average, the rent burden for New Yorkers tends to be lower than the benchmark.
+As you could see, despite public perception, on average, the rent burden for New Yorkers tends to be lower than the benchmark.
 ```{r}
 #| echo: false
 #| message: false
@@ -823,112 +822,9 @@ Lets first take a look at the first metric.
 #| echo: false
 #| message: false
 #| warning: false
-cbsa_housing <- POPULATION |>
-  select(GEOID, NAME, year, population) |>
-  mutate(cbsa_code = str_replace_all(GEOID, "[^0-9]", ""),
-         cbsa_name = str_remove(NAME, ",.*")) |>
-  left_join(
-    PERMITS |>
-      mutate(cbsa_code = as.character(CBSA)) |>
-      select(cbsa_code, year, new_housing_units_permitted),
-    by = c("cbsa_code", "year")
-  ) |>
-  filter(!is.na(population), !is.na(new_housing_units_permitted))
-
-cbsa_housing <- cbsa_housing |>
-  group_by(cbsa_code) |>
-  arrange(cbsa_code, year) |>
-  mutate(
-    population_lag5 = lag(population, 5),
-    pop_growth_5yr = population - population_lag5
-  ) |>
-  ungroup()
-
-cbsa_housing <- cbsa_housing |>
-  mutate(
-    housing_growth_instant = new_housing_units_permitted / population,
-
-    housing_growth_rate = if_else(pop_growth_5yr > 0,
-                                  new_housing_units_permitted / pop_growth_5yr,
-                                  NA_real_)
-  )
-
-cbsa_housing <- cbsa_housing |>
-  mutate(
-    housing_growth_instant_std = (housing_growth_instant - mean(housing_growth_instant, na.rm = TRUE)) /
-                                 sd(housing_growth_instant, na.rm = TRUE),
-    housing_growth_rate_std = (housing_growth_rate - mean(housing_growth_rate, na.rm = TRUE)) /
-                              sd(housing_growth_rate, na.rm = TRUE)
-  )
-top_instant <- cbsa_housing |>
-  filter(!is.na(housing_growth_instant_std)) |>
-  arrange(desc(housing_growth_instant_std)) |>
-  distinct(cbsa_code, cbsa_name, .keep_all = TRUE) |>
-  slice_head(n = 10) |>
-  select(cbsa_code, cbsa_name, year, housing_growth_instant_std)
-
-bottom_instant <- cbsa_housing |>
-  filter(!is.na(housing_growth_instant_std)) |>
-  arrange(housing_growth_instant_std) |>
-  distinct(cbsa_code, cbsa_name, .keep_all = TRUE) |>
-  slice_head(n = 10) |>
-  select(cbsa_code, cbsa_name, year, housing_growth_instant_std)
-
-top_rate <- cbsa_housing |>
-  filter(!is.na(housing_growth_rate_std)) |>
-  arrange(desc(housing_growth_rate_std)) |>
-  distinct(cbsa_code, cbsa_name, .keep_all = TRUE) |>
-  slice_head(n = 10) |>
-  select(cbsa_code, cbsa_name, year, housing_growth_rate_std)
-
-bottom_rate <- cbsa_housing |>
-  filter(!is.na(housing_growth_rate_std)) |>
-  arrange(housing_growth_rate_std) |>
-  distinct(cbsa_code, cbsa_name, .keep_all = TRUE) |>
-  slice_head(n = 10) |>
-  select(cbsa_code, cbsa_name, year, housing_growth_rate_std)
-
-DT::datatable(top_instant,
-          caption = "Top 10 CBSAs by Instantaneous Housing Growth (Standardized)",
-          options = list(pageLength = 10))
-
-DT::datatable(bottom_instant,
-          caption = "Bottom 10 CBSAs by Instantaneous Housing Growth (Standardized)",
-          options = list(pageLength = 10))
-```
-After coming up with our metric, we are able to separate the top 10 and bottom 10 CBSA's in terms of instantaneous housing growth.
- 
-Next, we will take a look at the second metric.
-```{r}
-#| echo: false
-#| message: false
-#| warning: false
-DT::datatable(top_rate,
-          caption = "Top 10 CBSAs by Rate-Based Housing Growth (Standardized)",
-          options = list(pageLength = 10))
-
-DT::datatable(bottom_rate,
-          caption = "Bottom 10 CBSAs by Rate-Based Housing Growth (Standardized)",
-          options = list(pageLength = 10))
-```
-After coming up with our second metric, we are able to separate the top 10 and bottom 10 CBSA's in terms of rate-based housing growth.
-
-The last metric we will take a look is a composite score that combines the first two metrics.
-
-Once we figured out the metric, we are going to identify the CBSA's that do well and poor with this measure
-```{r}
-#| echo: false
-#| message: false
-#| warning: false
 #| include: true
+library(slider)
 
-library(dplyr)
-library(stringr)
-library(scales)
-library(DT)
-library(slider)  # <-- use slider for safe rolling means
-
-# 1) Join POPULATION and PERMITS at CBSA + year
 cbsa_housing <- POPULATION |>
   select(GEOID, NAME, year, population) |>
   mutate(
@@ -944,7 +840,6 @@ cbsa_housing <- POPULATION |>
   filter(!is.na(population), !is.na(new_housing_units_permitted)) |>
   arrange(cbsa_code, year)
 
-# 2) 5-year lookback population using lag() within CBSA
 cbsa_housing <- cbsa_housing |>
   group_by(cbsa_code) |>
   mutate(
@@ -953,21 +848,16 @@ cbsa_housing <- cbsa_housing |>
   ) |>
   ungroup()
 
-# 3) Construct the two housing-growth metrics
 cbsa_housing <- cbsa_housing |>
   mutate(
-    # Instantaneous: permits per person this year
     housing_growth_instant = new_housing_units_permitted / population,
 
-    # Rate-based: permits per *incremental* resident over prior 5 years
     housing_growth_rate = if_else(
       !is.na(pop_growth_5yr) & pop_growth_5yr > 0,
       new_housing_units_permitted / pop_growth_5yr,
       NA_real_
     )
   )
-
-# 4) Standardize (z-score) both metrics across all CBSA-years
 cbsa_housing <- cbsa_housing |>
   mutate(
     housing_growth_instant_std = (housing_growth_instant - mean(housing_growth_instant, na.rm = TRUE)) /
@@ -976,7 +866,6 @@ cbsa_housing <- cbsa_housing |>
                                  sd(housing_growth_rate,    na.rm = TRUE)
   )
 
-# 5) Composite score (equal-weighted) + standardized composite
 cbsa_housing <- cbsa_housing |>
   mutate(
     housing_growth_composite = 0.5 * housing_growth_instant_std +
@@ -985,8 +874,6 @@ cbsa_housing <- cbsa_housing |>
                                    sd(housing_growth_composite, na.rm = TRUE)
   )
 
-# 6) Rolling 5-year averages (current year + previous 4) for standardized scores
-#    Use slider so short series return NA instead of error; .complete=TRUE requires full 5.
 cbsa_housing <- cbsa_housing |>
   group_by(cbsa_code) |>
   arrange(cbsa_code, year) |>
@@ -997,7 +884,6 @@ cbsa_housing <- cbsa_housing |>
   ) |>
   ungroup()
 
-# 7) Top/Bottom tables (use the latest year to avoid duplicate CBSAs)
 latest_year <- max(cbsa_housing$year, na.rm = TRUE)
 
 top_instant <- cbsa_housing |>
@@ -1036,31 +922,46 @@ bottom_composite <- cbsa_housing |>
   slice_head(n = 10) |>
   select(cbsa_code, cbsa_name, year, housing_growth_composite_std)
 
-# 8) Display the tables
-datatable(top_instant,
+DT::datatable(top_instant,
           caption = glue::glue("Top 10 CBSAs by Instantaneous Housing Growth (Std) — {latest_year}"),
           options = list(pageLength = 10))
 
-datatable(bottom_instant,
+DT::datatable(bottom_instant,
           caption = glue::glue("Bottom 10 CBSAs by Instantaneous Housing Growth (Std) — {latest_year}"),
           options = list(pageLength = 10))
+```
+After coming up with our metric, we are able to separate the top 10 and bottom 10 CBSA's in terms of instantaneous housing growth.
+ 
+Next, we will take a look at the second metric.
 
-datatable(top_rate,
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+DT::datatable(top_rate,
           caption = glue::glue("Top 10 CBSAs by Rate-Based Housing Growth (Std) — {latest_year}"),
           options = list(pageLength = 10))
 
-datatable(bottom_rate,
+DT::datatable(bottom_rate,
           caption = glue::glue("Bottom 10 CBSAs by Rate-Based Housing Growth (Std) — {latest_year}"),
           options = list(pageLength = 10))
+```
+After coming up with our second metric, we are able to separate the top 10 and bottom 10 CBSA's in terms of rate-based housing growth.
 
-datatable(top_composite,
+The last metric we will take a look is a composite score that combines the first two metrics.
+
+Once we figured out the metric, we are going to identify the CBSA's that do well and poor with this measure.
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+DT::datatable(top_composite,
           caption = glue::glue("Top 10 CBSAs by Composite Housing Growth (Std) — {latest_year}"),
           options = list(pageLength = 10))
 
-datatable(bottom_composite,
+DT::datatable(bottom_composite,
           caption = glue::glue("Bottom 10 CBSAs by Composite Housing Growth (Std) — {latest_year}"),
           options = list(pageLength = 10))
-
 ```
 As you could see above.
 
@@ -1068,4 +969,187 @@ As you could see above.
 #| echo: false
 #| message: false
 #| warning: false
+#| include: true
+
+library(dplyr)
+library(stringr)
+library(ggplot2)
+library(scales)
+library(ggrepel)
+
+# ---- assume income_rent and cbsa_housing exist as in prior chunk ----
+# If not, you can reuse the "self-contained" build I sent earlier.
+
+# 1) Join and FIX the duplicate cbsa_name columns
+cbsa_merged <- inner_join(
+  income_rent,                                             # cbsa_code, cbsa_name, year, rent_burden_raw
+  cbsa_housing,                                            # cbsa_code, cbsa_name, year, population, housing_growth_composite_std
+  by = c("cbsa_code","year"),
+  suffix = c(".rent", ".house")
+) %>%
+  mutate(cbsa_name = coalesce(cbsa_name.rent, cbsa_name.house)) %>%
+  select(cbsa_code, cbsa_name, year, rent_burden_raw, population, housing_growth_composite_std)
+
+# Dynamic windows for start/end (first/last 3 years present)
+min_y <- min(cbsa_merged$year, na.rm = TRUE)
+max_y <- max(cbsa_merged$year, na.rm = TRUE)
+start_years <- seq(min_y, min(min_y + 2, max_y))
+end_years   <- seq(max(max_y - 2, min_y), max_y)
+
+# Build summary used by the YIMBY plot
+cbsa_summary <- cbsa_merged %>%
+  group_by(cbsa_code, cbsa_name) %>%
+  summarize(
+    rent_burden_start   = mean(rent_burden_raw[year %in% start_years], na.rm = TRUE),
+    rent_burden_end     = mean(rent_burden_raw[year %in% end_years],   na.rm = TRUE),
+    rent_burden_change  = rent_burden_end - rent_burden_start,
+    pop_start           = mean(population[year %in% start_years], na.rm = TRUE),
+    pop_end             = mean(population[year %in% end_years],   na.rm = TRUE),
+    pop_growth          = (pop_end - pop_start) / pmax(pop_start, 1),
+    housing_growth_mean = mean(housing_growth_composite_std, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  filter(
+    is.finite(rent_burden_start),
+    is.finite(rent_burden_end),
+    is.finite(pop_start), pop_start > 0,
+    is.finite(pop_end),
+    is.finite(pop_growth),
+    is.finite(housing_growth_mean)
+  )
+num_si <- scales::label_number(scale_cut = scales::cut_short_scale())
+
+# --- 1️⃣ Scatter — All CBSAs ---
+cbsa_summary_simple <- cbsa_merged |>
+  group_by(cbsa_code, cbsa_name) |>
+  summarize(
+    avg_rent_burden    = mean(rent_burden_raw, na.rm = TRUE),
+    avg_housing_growth = mean(housing_growth_composite_std, na.rm = TRUE),
+    avg_population     = mean(population, na.rm = TRUE),
+    .groups = "drop"
+  ) |>
+  filter(is.finite(avg_rent_burden), is.finite(avg_housing_growth))
+
+ggplot(cbsa_summary_simple,
+       aes(x = avg_rent_burden, y = avg_housing_growth, size = avg_population)) +
+  geom_point(alpha = 0.7, color = "#1f78b4") +
+  scale_x_continuous(labels = percent_format(accuracy = 1)) +
+  scale_size_continuous(labels = num_si, name = "Avg Population") +
+  labs(
+    title = "Rent Burden vs Housing Growth Across All CBSAs",
+    subtitle = "Each point = one CBSA; size = average population",
+    x = "Average Rent Burden (share of income)",
+    y = "Average Housing Growth (standardized)"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(plot.title = element_text(face = "bold"),
+        legend.position = "bottom")
+
+# --- 2️⃣ Line Graph — New York CBSA Only (code 35620) ---
+ny_code <- "35620"
+
+ny_data <- cbsa_merged |>
+  filter(cbsa_code == ny_code, year >= 2014, year <= 2018) |>
+  group_by(year) |>
+  summarize(
+    rent_burden = mean(rent_burden_raw, na.rm = TRUE),
+    housing_growth = mean(housing_growth_composite_std, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+# --- Visualization: NYC (2014–2018) ---
+ggplot(ny_data, aes(x = year)) +
+  # Solid line = rent burden
+  geom_line(aes(y = rent_burden * 100, color = "Rent Burden"), linewidth = 1.3) +
+  # Dashed line = housing growth (true standardized values)
+  geom_line(aes(y = housing_growth, color = "Housing Growth"), linewidth = 1.3, linetype = "dashed") +
+  
+  # Custom Y-axis range and breaks
+  scale_y_continuous(
+    name = "Rent Burden (% of Income Spent on Rent)",
+    limits = c(-10, 30),                      # y-axis from −10 to 30
+    breaks = seq(-10, 30, by = 10),           # ticks at −10, 0, 10, 20, 30
+    sec.axis = sec_axis(~ ., name = "Housing Growth (Standardized)")
+  ) +
+  
+  scale_color_manual(
+    values = c("Rent Burden" = "#1b9e77", "Housing Growth" = "#d95f02"),
+    name = "Metric"
+  ) +
+  labs(
+    title = "Rent Burden and Housing Growth — New York CBSA (35620)",
+    subtitle = "Solid = Rent Burden; Dashed = Housing Growth (true standardized scale)",
+    x = "Year"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.title = element_text(face = "bold"),
+    legend.position = "bottom"
+  )
+
+# === VIS C: YIMBY identification (unchanged, now works with fixed names) ===
+rb_start_med <- median(cbsa_summary$rent_burden_start, na.rm = TRUE)
+
+cbsa_summary <- cbsa_summary %>%
+  mutate(
+    yimby_flag = (rent_burden_start > rb_start_med) &
+                 (rent_burden_change < 0) &
+                 (pop_growth > 0) &
+                 (housing_growth_mean > 0)
+  )
+
+yimby_cbsas <- cbsa_summary %>%
+  filter(yimby_flag) %>%
+  arrange(desc(housing_growth_mean)) %>%
+  slice_head(n = 12)
+
+ggplot(cbsa_summary,
+       aes(x = rent_burden_change, y = housing_growth_mean, color = yimby_flag)) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "gray40") +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "gray40") +
+  geom_point(alpha = 0.85, size = 3) +
+  geom_text_repel(
+    data = yimby_cbsas,
+    aes(label = cbsa_name),
+    size = 3, max.overlaps = 15, box.padding = 0.3
+  ) +
+  scale_color_manual(values = c(`TRUE` = "#1b9e77", `FALSE` = "gray70"),
+                     name = "YIMBY Candidate") +
+  labs(
+    title = "Identifying “YIMBY” CBSAs",
+    subtitle = sprintf("Start window: %s–%s | End window: %s–%s",
+                       min(start_years), max(start_years), min(end_years), max(end_years)),
+    x = "Change in Rent Burden (end − start)",
+    y = "Average Housing Growth (standardized)"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(plot.title = element_text(face = "bold"))
+
 ```
+##Federal “Build Homes Where People Need Them” Act##
+
+#The Challenge#
+Across the United States, families are spending more on rent than ever before. In many metropolitan areas, housing supply has failed to keep up with population growth. This shortage drives up rents, limits household mobility, and increases the cost of living for working families. At the same time, the lack of new housing construction strains local labor markets, especially in essential sectors such as education and health care.
+
+#The Proposal#
+The Build Homes Where People Need Them Act would create a federal incentive program that rewards local governments for adopting pro-housing reforms—streamlining zoning, permitting, and approvals while protecting renters and aligning infrastructure investment with growth. Cities that make it easier to build homes near jobs and transit would be eligible for competitive federal grants that help finance infrastructure, workforce housing, and mixed-income development.
+
+#Identifying the Right Sponsors#
+To ensure bipartisan appeal and geographic balance, the bill should have two lead sponsors. The primary sponsor should represent a metropolitan area that has demonstrated “YIMBY success”—a city that once faced high rent burdens but has seen improvement due to robust housing development and population growth. This sponsor can credibly claim that a pro-housing approach works in practice.
+The co-sponsor should represent a metro that continues to experience high rent burdens and limited new development. Their support underscores the urgency for national assistance to unlock stalled local housing markets.
+
+#Building Broad Support#
+A successful housing reform coalition requires allies with direct economic stakes in affordable housing. Two especially relevant groups are health-care professionals and public-sector workers such as teachers and first responders. Both face challenges finding housing near their workplaces. By encouraging new development, this bill would reduce commute times, improve retention, and expand disposable income—benefiting not only these workers but also the broader local economy.
+
+#Measuring Success#
+Our approach uses two intuitive, transparent indicators to guide funding and accountability:
+
+Rent Burden: The share of a typical household’s income spent on rent, standardized around a 30% benchmark. A value near zero indicates an average burden, while positive values signal affordability stress.
+
+Housing Growth: A composite of two measures—new housing permits relative to total population, and permits relative to five-year population growth. This captures both current construction intensity and whether cities are building fast enough to keep pace with demand.
+
+#Why This Bill Matters#
+Cities that build homes relieve pressure on rents, support workforce stability, and improve local competitiveness. For high-rent areas, federal support can help overcome regulatory inertia and spur equitable growth. By linking funding to measurable outcomes, this bill ensures accountability and rewards communities that act to make housing affordable again.
+
+#Conclusion#
+The Build Homes Where People Need Them Act offers a pragmatic, bipartisan solution to the housing crisis. It combines data-driven metrics, local flexibility, and tangible incentives for reform—empowering both fast-growing and housing-constrained cities to deliver the homes American families need.
