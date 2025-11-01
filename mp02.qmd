@@ -391,14 +391,12 @@ Next, we go over to look at average income per state, more specifically in the y
 library(usmap)
 library(viridis)
 
-# helper df to map state abbreviations to full names (incl. DC, PR)
 state_df <- data.frame(
   abb  = c(state.abb, "DC", "PR"),
   name = c(state.name, "District of Columbia", "Puerto Rico"),
   stringsAsFactors = FALSE
 )
 
-# compute per-state average individual income in 2015
 state_income_2015 <- INCOME |>
   filter(year == 2015) |>
   select(GEOID, NAME, household_income, year) |>
@@ -412,7 +410,6 @@ state_income_2015 <- INCOME |>
   ) |>
   mutate(
     total_income = household_income * households,
-    # extract two-letter state/territory code from "NAME"
     state_abbr = str_extract(NAME, ", (.{2})") |> str_remove(", ")
   ) |>
   group_by(state_abbr) |>
@@ -422,22 +419,18 @@ state_income_2015 <- INCOME |>
     avg_individual_income_num = total_income_state / total_population_state,
     .groups = "drop"
   ) |>
-  # attach full state name so usmap is happy
   left_join(
     state_df,
     by = c("state_abbr" = "abb")
   ) |>
   rename(state_full = name)
 
-# prep data for usmap:
-# plot_usmap() needs a column literally called `state`
 plot_data_2015 <- state_income_2015 |>
   select(
     state = state_full,
     avg_individual_income_num
   )
 
-# draw choropleth
 plot_usmap(
   data = plot_data_2015,
   values = "avg_individual_income_num",
@@ -508,7 +501,7 @@ DT::datatable(
   most_ds_per_year |>
     arrange(desc(YEAR)) |>
     slice_head(n = 5) |>
-    select(YEAR, cbsa_code, cbsa_name),   # only show these columns
+    select(YEAR, cbsa_code, cbsa_name),  
   caption = "Top 5 Most Recent Years – CBSA with the Most Data Scientists (NAICS 5182)",
   options = list(dom = 't', scrollX = TRUE)
 )
@@ -1014,7 +1007,6 @@ max_y <- max(cbsa_merged$year, na.rm = TRUE)
 start_years <- seq(min_y, min(min_y + 2, max_y))
 end_years   <- seq(max(max_y - 2, min_y), max_y)
 
-# Build summary used by the YIMBY plot
 cbsa_summary <- cbsa_merged %>%
   group_by(cbsa_code, cbsa_name) %>%
   summarize(

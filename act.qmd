@@ -26,6 +26,3 @@ Cities that build homes relieve pressure on rents, support workforce stability, 
 
 # Conclusion
 The Rebuild the American Dream Act offers a pragmatic, bipartisan solution to the housing crisis. It combines data-driven metrics, local flexibility, and tangible incentives for reform—empowering both fast-growing and housing-constrained cities to deliver the homes American families need.
-
---------------
-Last Updated: `r format(Sys.time(), "%A %m %d, %Y at %H:%M%p")`
