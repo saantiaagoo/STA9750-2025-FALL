@@ -2,11 +2,11 @@
 title: "NYC Tree Party"
 format: html
 ---
-New York City’s trees are one of our greatest public assets. They shade our streets, clean our air, and make our neighborhoods more livable — yet not every community benefits equally from this natural infrastructure. As a City Council member, I believe it’s time we address this imbalance by dedicating additional funding to expand and maintain our urban forest, particularly in districts that have been historically overlooked.
+New York City’s trees are one of our most valuable public resources — cooling our streets, improving air quality, and strengthening the livability of our neighborhoods. But not every community benefits equally. As a City Council member, I want to ensure that historically overlooked districts receive the same green investment as the rest of the city.
 
-The NYC Department of Parks and Recreation (DPR) manages nearly 900,000 trees citywide, covering over 30,000 acres of public parkland. This is a tremendous achievement, but the data shows that some council districts have denser, healthier tree populations than others. To better understand these disparities, I am analyzing the NYC TreeMap dataset to examine how trees are distributed across districts, which species dominate, and how factors like tree health and diversity vary throughout the city.
+DPR manages nearly 900,000 trees across 30,000 acres of parkland, yet the data shows clear differences in tree density, health, and species diversity across council districts. By analyzing the NYC TreeMap dataset, I aim to highlight where these gaps exist and use that evidence to advocate for targeted funding to expand and maintain our urban forest.
 
-By grounding this proposal in data, my goal is to build a strong case for targeted investment — a program that not only plants more trees in under-served areas but also ensures long-term care and maintenance. Expanding the city’s tree canopy isn’t just about beautification; it’s about equity, public health, and resilience. Every New Yorker deserves to walk down a shaded block, breathe cleaner air, and share in the environmental and social benefits our trees provide.
+Investing in trees isn’t just beautification — it’s an issue of equity, public health, and resilience. Every New Yorker deserves clean air, shaded streets, and access to the benefits our city’s trees provide.
 
 First, let's take a look at the data and look at all the city council districts by borough.
 
@@ -73,6 +73,7 @@ get_nyc_council_districts <- function(simplify_tol_m = NULL){
   }
   dat
 }
+nyc_council_districts <- get_nyc_council_districts()
 ```
 ```{r}
 #| echo: false
@@ -84,17 +85,17 @@ nyc_ccd_fast <- get_nyc_council_districts(simplify_tol_m = 5)
 
 ggplot(nyc_ccd_fast) +
   geom_sf(color = "black", fill = NA, size = 0.3) +   
-  geom_sf_text(aes(label = CounDist), size = 3) +     
+  geom_sf_text(aes(label = CounDist), size = 1.5) +     
   theme_minimal() +
   labs(
     title = "NYC City Council Districts",
-    subtitle = "District numbers only"
+    x = "Longitude",
+    y = "Latitude"
   )
 ```
 As you could see, there are 51 city council districts in New York City. 
 
 Once we have visualized all the districts, next we are going to visualize the trees that within each one.
-
 ```{r}
 #| echo: false
 #| message: false
@@ -149,36 +150,31 @@ nyc_trees <- function(
       }
     }
   }
-  trees_sf <- dplyr::bind_rows(pages)
-  trees_sf
+  tree_points <- dplyr::bind_rows(pages)
+  tree_points
 }
+tree_points <- nyc_trees()
 ```
 ```{r}
 #| echo: false
 #| message: false
 #| warning: false
-
-council_districts <- get_nyc_council_districts(simplify_tol_m = 5)  # or NULL if you want full detail
-
-tree_points <- nyc_trees()
-
-council_districts <- st_transform(council_districts, crs = "WGS84")
 tree_points <- st_transform(tree_points,    crs = "WGS84")
 
 ggplot() +
-  # council district polygons
-  geom_sf(
-    data = council_districts,
-    fill  = NA,
-    color = "grey40",
-    linewidth = 0.3
-  ) +
-  # tree points
+  # Draw tree points FIRST (background)
   geom_sf(
     data = tree_points,
     color = "darkgreen",
-    alpha = 0.2,
-    size  = 0.1
+    alpha = 0.1,
+    size  = 0.01
+  ) +
+  # Draw district boundaries SECOND (on top)
+  geom_sf(
+    data = nyc_ccd_fast,
+    fill  = NA,
+    color = "black",
+    linewidth = 0.5
   ) +
   coord_sf() +
   theme_minimal() +
@@ -188,27 +184,50 @@ ggplot() +
   ) +
   labs(
     title = "NYC Street Trees and City Council Districts",
-    subtitle = "2015 Street Tree Census points over City Council district boundaries",
     x = NULL, y = NULL
   )
+
 ```
+This plot overlays all NYC street tree locations on top of the City Council district boundaries. Because the city has such a large number of trees, the individual points are so dense that they blend together and form solid green areas rather than distinct dots. This density highlights how heavily planted certain neighborhoods are and gives a quick visual impression of where trees are most concentrated across the city.
+
+Now that we have visualize our council districts and its trees, it's time to do more in depth analysis on the data.
+
+Here will be the 4 things will be looking for
+
+1. Council district with the most trees
+2. Council district with the highest density of trees
+3. Council district with the highest fraction of dead trees
+4. The most common tree species in Manhattan
 ```{r}
 #| echo: false
 #| message: false
 #| warning: false
+library(dplyr)
+library(DT)
 tree_districts <- st_join(
   tree_points,
-  council_districts,
-  join = st_within
+  nyc_council_districts,
+  join = st_within    
 )
+
 trees_by_district <- tree_districts %>%
-  st_drop_geometry() %>%
+  st_drop_geometry() %>%      
   group_by(CounDist) %>%
   summarize(n_trees = n()) %>%
   arrange(desc(n_trees))
 
-trees_by_district[1, ]   # district with the most trees
-```
-```{r}
-names(council_districts)
+top10 <- trees_by_district %>% 
+  slice_max(n_trees, n = 10) %>%
+  rename(`Council District` = CounDist,
+         `Tree Count` = n_trees) 
+  
+datatable(
+  top10,
+  rownames = TRUE,
+  options = list(
+    pageLength = 10,
+    autoWidth = TRUE
+  ),
+  caption = "Top 10 NYC Council Districts by Number of Trees"
+)
 ```

@@ -68,6 +68,16 @@ ul.task-list li input[type="checkbox"] {
     "search-label": "Search"
   }
 }</script>
+<link href="site_libs/htmltools-fill-0.5.8.1/fill.css" rel="stylesheet">
+<script src="site_libs/htmlwidgets-1.6.4/htmlwidgets.js"></script>
+<link href="site_libs/datatables-css-0.0.0/datatables-crosstalk.css" rel="stylesheet">
+<script src="site_libs/datatables-binding-0.34.0/datatables.js"></script>
+<script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
+<link href="site_libs/dt-core-1.13.6/css/jquery.dataTables.min.css" rel="stylesheet">
+<link href="site_libs/dt-core-1.13.6/css/jquery.dataTables.extra.css" rel="stylesheet">
+<script src="site_libs/dt-core-1.13.6/js/jquery.dataTables.min.js"></script>
+<link href="site_libs/crosstalk-1.2.2/css/crosstalk.min.css" rel="stylesheet">
+<script src="site_libs/crosstalk-1.2.2/js/crosstalk.min.js"></script>
 
 
 </head>
@@ -117,9 +127,9 @@ ul.task-list li input[type="checkbox"] {
 </header>
 
 
-<p>New York City’s trees are one of our greatest public assets. They shade our streets, clean our air, and make our neighborhoods more livable — yet not every community benefits equally from this natural infrastructure. As a City Council member, I believe it’s time we address this imbalance by dedicating additional funding to expand and maintain our urban forest, particularly in districts that have been historically overlooked.</p>
-<p>The NYC Department of Parks and Recreation (DPR) manages nearly 900,000 trees citywide, covering over 30,000 acres of public parkland. This is a tremendous achievement, but the data shows that some council districts have denser, healthier tree populations than others. To better understand these disparities, I am analyzing the NYC TreeMap dataset to examine how trees are distributed across districts, which species dominate, and how factors like tree health and diversity vary throughout the city.</p>
-<p>By grounding this proposal in data, my goal is to build a strong case for targeted investment — a program that not only plants more trees in under-served areas but also ensures long-term care and maintenance. Expanding the city’s tree canopy isn’t just about beautification; it’s about equity, public health, and resilience. Every New Yorker deserves to walk down a shaded block, breathe cleaner air, and share in the environmental and social benefits our trees provide.</p>
+<p>New York City’s trees are one of our most valuable public resources — cooling our streets, improving air quality, and strengthening the livability of our neighborhoods. But not every community benefits equally. As a City Council member, I want to ensure that historically overlooked districts receive the same green investment as the rest of the city.</p>
+<p>DPR manages nearly 900,000 trees across 30,000 acres of parkland, yet the data shows clear differences in tree density, health, and species diversity across council districts. By analyzing the NYC TreeMap dataset, I aim to highlight where these gaps exist and use that evidence to advocate for targeted funding to expand and maintain our urban forest.</p>
+<p>Investing in trees isn’t just beautification — it’s an issue of equity, public health, and resilience. Every New Yorker deserves clean air, shaded streets, and access to the benefits our city’s trees provide.</p>
 <p>First, let’s take a look at the data and look at all the city council districts by borough.</p>
 <div class="cell">
 <div class="cell-output-display">
@@ -139,6 +149,21 @@ ul.task-list li input[type="checkbox"] {
 <p><img src="mp03_files/figure-html/unnamed-chunk-4-1.png" class="img-fluid figure-img" width="672"></p>
 </figure>
 </div>
+</div>
+</div>
+<p>This plot overlays all NYC street tree locations on top of the City Council district boundaries. Because the city has such a large number of trees, the individual points are so dense that they blend together and form solid green areas rather than distinct dots. This density highlights how heavily planted certain neighborhoods are and gives a quick visual impression of where trees are most concentrated across the city.</p>
+<p>Now that we have visualize our council districts and its trees, it’s time to do more in depth analysis on the data.</p>
+<p>Here will be the 4 things will be looking for</p>
+<ol type="1">
+<li>Council district with the most trees</li>
+<li>Council district with the highest density of trees</li>
+<li>Council district with the highest fraction of dead trees</li>
+<li>The most common tree species in Manhattan</li>
+</ol>
+<div class="cell">
+<div class="cell-output-display">
+<div class="datatables html-widget html-fill-item" id="htmlwidget-5553ebbc9323ca9c2314" style="width:100%;height:auto;"></div>
+<script type="application/json" data-for="htmlwidget-5553ebbc9323ca9c2314">{"x":{"filter":"none","vertical":false,"caption":"<caption>Top 10 NYC Council Districts by Number of Trees<\/caption>","data":[["1","2","3","4","5","6","7","8","9","10"],[51,50,19,23,13,49,39,31,32,27],[70965,52500,49940,44917,36665,35117,32403,31321,30270,29395]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th> <\/th>\n      <th>Council District<\/th>\n      <th>Tree Count<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"pageLength":10,"autoWidth":true,"columnDefs":[{"className":"dt-right","targets":[1,2]},{"orderable":false,"targets":0},{"name":" ","targets":0},{"name":"Council District","targets":1},{"name":"Tree Count","targets":2}],"order":[],"orderClasses":false}},"evals":[],"jsHooks":[]}</script>
 </div>
 </div>
 
