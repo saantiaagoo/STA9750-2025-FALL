@@ -1,325 +1,214 @@
 ---
-title: "Untitled"
+title: "NYC Tree Party"
 format: html
 ---
+New York City’s trees are one of our greatest public assets. They shade our streets, clean our air, and make our neighborhoods more livable — yet not every community benefits equally from this natural infrastructure. As a City Council member, I believe it’s time we address this imbalance by dedicating additional funding to expand and maintain our urban forest, particularly in districts that have been historically overlooked.
 
-Hello there
+The NYC Department of Parks and Recreation (DPR) manages nearly 900,000 trees citywide, covering over 30,000 acres of public parkland. This is a tremendous achievement, but the data shows that some council districts have denser, healthier tree populations than others. To better understand these disparities, I am analyzing the NYC TreeMap dataset to examine how trees are distributed across districts, which species dominate, and how factors like tree health and diversity vary throughout the city.
+
+By grounding this proposal in data, my goal is to build a strong case for targeted investment — a program that not only plants more trees in under-served areas but also ensures long-term care and maintenance. Expanding the city’s tree canopy isn’t just about beautification; it’s about equity, public health, and resilience. Every New Yorker deserves to walk down a shaded block, breathe cleaner air, and share in the environmental and social benefits our trees provide.
+
+First, let's take a look at the data and look at all the city council districts by borough.
+
 ```{r}
-# install.packages(c("sf", "utils"))  # if needed
+#| echo: false
+#| message: false
+#| warning: false
+
+library(tidyverse)
+library(glue)
 library(sf)
 
-get_nyc_council_districts <- function(
-  dest_dir = "data/mp03",
-  include_water = FALSE,     # FALSE => clipped to shoreline (nycc); TRUE => water-included (nyccwi)
-  simplify_tol_m = NULL      # e.g., 5 for ~5 meters; NULL to skip simplifying
-) {
-  dir.create(dest_dir, recursive = TRUE, showWarnings = FALSE)
+if(!dir.exists(file.path("data", "mp03"))){
+  dir.create(file.path("data", "mp03"), showWarnings = FALSE, recursive = TRUE)
+}
 
-  # Pick edition + filename pattern from DCP metadata (25C is current as of 2025-08-18)
-  edition <- "25c"
-  base <- if (include_water) "nyccwi" else "nycc"
-  zip_url <- sprintf("https://www.nyc.gov/assets/planning/download/zip/data-maps/open-data/%s_%s.zip",
-                     base, edition)
+library <- function(pkg){
+  pkg <- as.character(substitute(pkg))
+  options(repos = c(CRAN = "https://cloud.r-project.org"))
+  if(!require(pkg, character.only = TRUE, quietly = TRUE)) install.packages(pkg)
+  stopifnot(require(pkg, character.only = TRUE, quietly = TRUE))
+}
 
-  zip_path <- file.path(dest_dir, sprintf("%s_%s.zip", base, edition))
-  unz_dir  <- file.path(dest_dir, sprintf("%s_%s", base, edition))
+get_nyc_council_districts <- function(simplify_tol_m = NULL){
 
-  # i) & ii) Download only if needed
-  if (!file.exists(zip_path)) {
+  zip_url <- "https://s-media.nyc.gov/agencies/dcp/assets/files/zip/data-tools/bytes/city-council/nycc_25c.zip"
+
+  zip_filename <- basename(zip_url)
+
+  zip_path <- file.path("data", "mp03", zip_filename)
+  unz_dir  <- file.path("data", "mp03", tools::file_path_sans_ext(zip_filename))
+
+  if(!file.exists(zip_path)){
     message("Downloading: ", zip_url)
-    utils::download.file(zip_url, zip_path, mode = "wb", quiet = TRUE)
+    utils::download.file(zip_url,
+                         destfile = zip_path,
+                         mode = "wb",
+                         quiet = TRUE)
   } else {
-    message("ZIP already exists, not downloading again: ", zip_path)
+    message("Using existing ZIP: ", zip_path)
   }
 
-  # iii) Unzip only if needed
-  if (!dir.exists(unz_dir)) {
+  if(!dir.exists(unz_dir)){
     message("Unzipping to: ", unz_dir)
     utils::unzip(zip_path, exdir = unz_dir)
   } else {
-    message("Unzipped folder already exists, reusing: ", unz_dir)
+    message("Using existing unzipped directory: ", unz_dir)
   }
 
-  # Locate the .shp (handles either folder structure)
   shp <- list.files(unz_dir, pattern = "\\.shp$", full.names = TRUE, recursive = TRUE)
-  if (length(shp) == 0) stop("No .shp found after unzip. Check ZIP contents.")
+  if(length(shp) == 0) stop("No .shp found after unzip. Check ZIP contents.")
   shp <- shp[1]
 
-  # iv) Read shapefile
   dat <- sf::st_read(shp, quiet = TRUE)
 
-  # v) Transform to WGS84 (EPSG:4326)
   dat <- sf::st_transform(dat, crs = "WGS84")
 
-  # Optional: simplify geometry to speed up plotting
-  if (!is.null(simplify_tol_m)) {
-    # st_simplify uses layer CRS units; after transform to WGS84, units are degrees.
-    # Convert meters → degrees approximately using meters/111_320 (at NYC latitude).
+  if(!is.null(simplify_tol_m)){
     tol_deg <- simplify_tol_m / 111320
-    dat$geometry <- sf::st_simplify(dat$geometry, dTolerance = tol_deg, preserveTopology = TRUE)
+    dat <- dat |>
+      mutate(geometry = sf::st_simplify(geometry,
+                                        dTolerance = tol_deg,
+                                        preserveTopology = TRUE))
   }
-
   dat
 }
-
 ```
 ```{r}
-# Clipped-to-shoreline version (good for most maps)
-council <- get_nyc_council_districts()
-
-# Water-included legal boundary
-council_wi <- get_nyc_council_districts(include_water = TRUE)
-
-# If plotting feels slow, simplify ~5 meters (visually lossless for citywide maps)
-council_fast <- get_nyc_council_districts(simplify_tol_m = 5)
-
-```
-```{r}
-# install.packages(c("httr2", "sf", "dplyr", "purrr", "glue"))  # if needed
-library(httr2)
-library(sf)
-library(dplyr)
-library(purrr)
-library(glue)
-
-get_nyc_tree_points <- function(
-  dest_dir = "data/mp03",
-  base_id  = "uvpi-gqnh",      # 2015 Street Tree Census - Tree Data
-  page_limit = 50000,          # SODA v2.0 max is 50,000; keep reasonable to avoid timeouts
-  pause_sec  = 0.2,            # pause between requests (be polite)
-  use_token  = TRUE            # if env var NYC_SODA_APP_TOKEN is set, send it
-) {
-  dir.create(dest_dir, recursive = TRUE, showWarnings = FALSE)
-
-  # Endpoints
-  geojson_base <- glue("https://data.cityofnewyork.us/resource/{base_id}.geojson")
-  count_url    <- glue("https://data.cityofnewyork.us/resource/{base_id}.json")
-
-  # Optional app token (recommended if you have one to avoid throttling)
-  app_token <- Sys.getenv("NYC_SODA_APP_TOKEN", unset = NA)
-
-  # 1) Fetch total row count using a cheap JSON count query (fast + tiny payload)
-  count_req <- request(count_url) |>
-    req_url_query(`$select` = "count(1)")
-  if (use_token && !is.na(app_token) && nzchar(app_token)) {
-    count_req <- count_req |> req_headers(`X-App-Token` = app_token)
-  }
-  n_total <- count_req |> req_perform() |> resp_body_json(simplifyVector = TRUE)
-  if (!("count_1" %in% names(n_total))) stop("Count query did not return count(1).")
-  n_total <- as.integer(n_total$count_1)
-
-  message("Total rows reported by API: ", format(n_total, big.mark = ","))
-
-  # 2) Iterate pages with $limit / $offset; save each page to data/mp03
-  n_pages <- ceiling(n_total / page_limit)
-  page_indices <- seq_len(n_pages)
-
-  files <- map_chr(page_indices, function(i) {
-    offset <- (i - 1) * page_limit
-    fname  <- file.path(dest_dir, sprintf("treepoints_%s_limit%05d_offset%07d.geojson",
-                                          base_id, page_limit, offset))
-    if (file.exists(fname) && file.size(fname) > 0) {
-      message("Reusing local file: ", basename(fname))
-      return(fname)
-    }
-
-    # Build request for this page
-    req <- request(geojson_base) |>
-      req_url_query(`$limit` = page_limit, `$offset` = offset)
-
-    if (use_token && !is.na(app_token) && nzchar(app_token)) {
-      req <- req |> req_headers(`X-App-Token` = app_token)
-    }
-
-    # Perform and write to disk atomically
-    resp <- req_perform(req)
-    body <- resp_body_raw(resp)
-    writeBin(body, fname)
-    message("Downloaded: ", basename(fname))
-    Sys.sleep(pause_sec)
-    fname
-  })
-
-  # 3) Read all GeoJSON pages with sf::st_read and combine
-  #    (sf will keep geometry column; attributes unioned by name)
-  message("Reading ", length(files), " GeoJSON file(s) with sf::st_read ...")
-  pieces <- map(files, ~ st_read(.x, quiet = TRUE))
-  bind_rows(pieces)
-}
-```
-```{r}
-trees_sf <- get_nyc_tree_points()
-
-# Peek
-trees_sf |> dplyr::glimpse()
-# Plot quick check (slow at full res)
-# plot(st_geometry(trees_sf), asp = 1)
-
-```
-
-```{r}
-# install.packages(c("ggplot2", "dplyr"))  # if needed
+#| echo: false
+#| message: false
+#| warning: false
 library(ggplot2)
-library(dplyr)
-library(sf)
 
-# 1) Load data (re-uses local files; polite to servers)
-council_sf <- get_nyc_council_districts(simplify_tol_m = 5)   # light simplify for speed (optional)
-trees_sf   <- get_nyc_tree_points()
+nyc_ccd_fast <- get_nyc_council_districts(simplify_tol_m = 5)
 
-# 2) (Optional) sample trees for a quick-look plot
-# Comment this out if you want *all* trees; plotting may be slow
-set.seed(42)
-trees_quick <- trees_sf %>% slice_sample(n = min(150000, nrow(trees_sf)))
-
-# 3) Build the plot
-p <- ggplot() +
-  # District boundaries (POLYGON/MULTIPOLYGON)
-  geom_sf(
-    data = council_sf,
-    mapping = aes(geometry = geometry),
-    fill = NA,                    # no fill, just outlines
-    color = "g
-```
-
-```{r}
-library(sf)
-library(dplyr)
-
-# Assuming you already ran these:
-# council_sf <- get_nyc_council_districts()
-# trees_sf   <- get_nyc_tree_points()
-
-# Spatial join: assign district to each tree
-trees_with_districts <- st_join(
-  trees_sf, 
-  council_sf,
-  join = st_intersects   # trees first → use st_intersects
-)
-
-# Inspect
-trees_with_districts %>% 
-  dplyr::select(tree_id = tree_id_fieldname_here, district = council_fieldname_here) %>% 
-  head()
-
-```
-
-```{r}
-library(dplyr)
-
-trees_per_district <- trees_with_districts %>%
-  st_drop_geometry() %>%                        # drop geometry for speed
-  count(council_district = coundist) %>%        # <-- replace “coundist” with your actual field name
-  arrange(desc(n))
-
-top_district <- trees_per_district %>% slice(1)
-top_district
-
-```
-```{r}
-library(dplyr)
-library(sf)
-
-# 1) Count trees per district (from the joined dataset)
-trees_per_district <- trees_with_districts %>%
-  st_drop_geometry() %>%                          # no geometry needed for counting
-  count(district = coundist, name = "tree_count") # replace coundist with your field name
-
-# 2) Extract district areas from the council shapes
-district_areas <- council_sf %>%
-  st_drop_geometry() %>%                          # keep only attributes
-  select(district = coundist, shape_area)         # shape_area is in square feet
-
-# 3) Combine tree counts + district areas
-density_df <- trees_per_district %>%
-  left_join(district_areas, by = "district") %>%
-  mutate(
-    tree_density = tree_count / shape_area        # trees per sq ft
-  ) %>%
-  arrange(desc(tree_density))
-
-densest <- density_df %>% slice(1)
-densest
-
-```
-```{r}
-library(dplyr)
-library(sf)
-
-dead_fraction <- trees_with_districts %>%
-  st_drop_geometry() %>%
-  # Replace "coundist" with your actual district column
-  group_by(district = coundist) %>%
-  summarize(
-    total_trees = n(),
-    dead_trees  = sum(health == "Dead", na.rm = TRUE),
-    frac_dead   = dead_trees / total_trees
-  ) %>%
-  arrange(desc(frac_dead))
-
-dead_fraction %>% slice(1)
-
-```
-```{r}
-library(dplyr)
-library(sf)
-
-# ---- 1. Add borough column based on council district number ----
-trees_borough <- trees_with_districts %>%
-  mutate(
-    borough = case_when(
-      coundist >= 1  & coundist <= 10 ~ "Manhattan",
-      coundist >= 11 & coundist <= 18 ~ "Bronx",
-      coundist >= 19 & coundist <= 32 ~ "Queens",
-      coundist >= 33 & coundist <= 48 ~ "Brooklyn",
-      coundist >= 49 & coundist <= 51 ~ "Staten Island",
-      TRUE ~ NA_character_
-    )
+ggplot(nyc_ccd_fast) +
+  geom_sf(color = "black", fill = NA, size = 0.3) +   
+  geom_sf_text(aes(label = CounDist), size = 3) +     
+  theme_minimal() +
+  labs(
+    title = "NYC City Council Districts",
+    subtitle = "District numbers only"
   )
-
-# ---- 2. Filter to Manhattan trees ----
-manhattan_trees <- trees_borough %>%
-  filter(borough == "Manhattan")
-
-# ---- 3. Count species and extract the most common ----
-common_species_manhattan <- manhattan_trees %>%
-  st_drop_geometry() %>%
-  filter(!is.na(spc_common)) %>%    # optional: drop missing species names
-  count(spc_common, sort = TRUE)
-
-# Print the full ranking
-common_species_manhattan
-
-# Most common species only
-common_species_manhattan %>% slice(1)
 ```
-```{r}
-library(dplyr)
-library(sf)
+As you could see, there are 51 city council districts in New York City. 
 
-# ---- 1. Helper function for creating a CRS-tagged point ----
-new_st_point <- function(lat, lon){
-  st_sfc(st_point(c(lon, lat))) |>   # IMPORTANT: (lon, lat) order
-    st_set_crs("WGS84")
+Once we have visualized all the districts, next we are going to visualize the trees that within each one.
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+library(httr2)
+library(dplyr)
+
+nyc_trees <- function(
+  url   = "https://data.cityofnewyork.us/resource/hn5i-inap.geojson",
+  limit = 5000L
+) {
+  mp03 <- file.path("data", "mp03")
+
+  offset <- 0L            
+  batch  <- 1L            
+  done   <- FALSE
+  pages  <- list()        
+
+  while (!done) {
+    tree_file <- file.path(mp03, paste0("nyc_trees_", offset, ".geojson"))
+
+    if (!file.exists(tree_file)) {
+      request(url) |>
+        req_url_query(`$limit` = limit, `$offset` = offset) |>
+        req_retry(max_tries = 5) |>
+        req_perform() |>
+        resp_body_raw() |>
+        writeBin(con = tree_file)
+    }
+
+    tree_page <- sf::st_read(tree_file, quiet = TRUE)
+    n_rows    <- nrow(tree_page)
+
+    if (n_rows == 0) {
+      # nothing here -> stop
+      done <- TRUE
+    } else {
+      # only touch planteddate if it actually exists
+      if ("planteddate" %in% names(tree_page)) {
+        tree_page <- tree_page |>
+          mutate(planteddate = as.character(planteddate))
+      }
+
+      pages[[batch]] <- tree_page
+
+      # if we get fewer rows than limit, we're at the end
+      if (n_rows < limit) {
+        done <- TRUE
+      } else {
+        offset <- offset + limit
+        batch  <- batch + 1L
+      }
+    }
+  }
+  trees_sf <- dplyr::bind_rows(pages)
+  trees_sf
 }
+```
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
 
-# ---- 2. Create Baruch point ----
-baruch_pt <- new_st_point(
-  lat = 40.7403,
-  lon = -73.9830
-)
+council_districts <- get_nyc_council_districts(simplify_tol_m = 5)  # or NULL if you want full detail
 
-# ---- 3. Compute distance to each tree ----
-trees_with_distance <- trees_with_districts %>%
-  mutate(
-    distance_m = st_distance(geometry, baruch_pt) |> as.numeric()
+tree_points <- nyc_trees()
+
+council_districts <- st_transform(council_districts, crs = "WGS84")
+tree_points <- st_transform(tree_points,    crs = "WGS84")
+
+ggplot() +
+  # council district polygons
+  geom_sf(
+    data = council_districts,
+    fill  = NA,
+    color = "grey40",
+    linewidth = 0.3
+  ) +
+  # tree points
+  geom_sf(
+    data = tree_points,
+    color = "darkgreen",
+    alpha = 0.2,
+    size  = 0.1
+  ) +
+  coord_sf() +
+  theme_minimal() +
+  theme(
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank()
+  ) +
+  labs(
+    title = "NYC Street Trees and City Council Districts",
+    subtitle = "2015 Street Tree Census points over City Council district boundaries",
+    x = NULL, y = NULL
   )
+```
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+tree_districts <- st_join(
+  tree_points,
+  council_districts,
+  join = st_within
+)
+trees_by_district <- tree_districts %>%
+  st_drop_geometry() %>%
+  group_by(CounDist) %>%
+  summarize(n_trees = n()) %>%
+  arrange(desc(n_trees))
 
-# ---- 4. Identify the closest tree ----
-closest_tree <- trees_with_distance %>%
-  slice_min(distance_m, n = 1)
-
-closest_species <- closest_tree$spc_common
-closest_species
-
+trees_by_district[1, ]   # district with the most trees
+```
+```{r}
+names(council_districts)
 ```

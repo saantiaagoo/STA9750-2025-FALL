@@ -1,0 +1,214 @@
+---
+title: "NYC Tree Party"
+format: html
+---
+New York City’s trees are one of our greatest public assets. They shade our streets, clean our air, and make our neighborhoods more livable — yet not every community benefits equally from this natural infrastructure. As a City Council member, I believe it’s time we address this imbalance by dedicating additional funding to expand and maintain our urban forest, particularly in districts that have been historically overlooked.
+
+The NYC Department of Parks and Recreation (DPR) manages nearly 900,000 trees citywide, covering over 30,000 acres of public parkland. This is a tremendous achievement, but the data shows that some council districts have denser, healthier tree populations than others. To better understand these disparities, I am analyzing the NYC TreeMap dataset to examine how trees are distributed across districts, which species dominate, and how factors like tree health and diversity vary throughout the city.
+
+By grounding this proposal in data, my goal is to build a strong case for targeted investment — a program that not only plants more trees in under-served areas but also ensures long-term care and maintenance. Expanding the city’s tree canopy isn’t just about beautification; it’s about equity, public health, and resilience. Every New Yorker deserves to walk down a shaded block, breathe cleaner air, and share in the environmental and social benefits our trees provide.
+
+First, let's take a look at the data and look at all the city council districts by borough.
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+
+library(tidyverse)
+library(glue)
+library(sf)
+
+if(!dir.exists(file.path("data", "mp03"))){
+  dir.create(file.path("data", "mp03"), showWarnings = FALSE, recursive = TRUE)
+}
+
+library <- function(pkg){
+  pkg <- as.character(substitute(pkg))
+  options(repos = c(CRAN = "https://cloud.r-project.org"))
+  if(!require(pkg, character.only = TRUE, quietly = TRUE)) install.packages(pkg)
+  stopifnot(require(pkg, character.only = TRUE, quietly = TRUE))
+}
+
+get_nyc_council_districts <- function(simplify_tol_m = NULL){
+
+  zip_url <- "https://s-media.nyc.gov/agencies/dcp/assets/files/zip/data-tools/bytes/city-council/nycc_25c.zip"
+
+  zip_filename <- basename(zip_url)
+
+  zip_path <- file.path("data", "mp03", zip_filename)
+  unz_dir  <- file.path("data", "mp03", tools::file_path_sans_ext(zip_filename))
+
+  if(!file.exists(zip_path)){
+    message("Downloading: ", zip_url)
+    utils::download.file(zip_url,
+                         destfile = zip_path,
+                         mode = "wb",
+                         quiet = TRUE)
+  } else {
+    message("Using existing ZIP: ", zip_path)
+  }
+
+  if(!dir.exists(unz_dir)){
+    message("Unzipping to: ", unz_dir)
+    utils::unzip(zip_path, exdir = unz_dir)
+  } else {
+    message("Using existing unzipped directory: ", unz_dir)
+  }
+
+  shp <- list.files(unz_dir, pattern = "\\.shp$", full.names = TRUE, recursive = TRUE)
+  if(length(shp) == 0) stop("No .shp found after unzip. Check ZIP contents.")
+  shp <- shp[1]
+
+  dat <- sf::st_read(shp, quiet = TRUE)
+
+  dat <- sf::st_transform(dat, crs = "WGS84")
+
+  if(!is.null(simplify_tol_m)){
+    tol_deg <- simplify_tol_m / 111320
+    dat <- dat |>
+      mutate(geometry = sf::st_simplify(geometry,
+                                        dTolerance = tol_deg,
+                                        preserveTopology = TRUE))
+  }
+  dat
+}
+```
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+library(ggplot2)
+
+nyc_ccd_fast <- get_nyc_council_districts(simplify_tol_m = 5)
+
+ggplot(nyc_ccd_fast) +
+  geom_sf(color = "black", fill = NA, size = 0.3) +   
+  geom_sf_text(aes(label = CounDist), size = 3) +     
+  theme_minimal() +
+  labs(
+    title = "NYC City Council Districts",
+    subtitle = "District numbers only"
+  )
+```
+As you could see, there are 51 city council districts in New York City. 
+
+Once we have visualized all the districts, next we are going to visualize the trees that within each one.
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+library(httr2)
+library(dplyr)
+
+nyc_trees <- function(
+  url   = "https://data.cityofnewyork.us/resource/hn5i-inap.geojson",
+  limit = 5000L
+) {
+  mp03 <- file.path("data", "mp03")
+
+  offset <- 0L            
+  batch  <- 1L            
+  done   <- FALSE
+  pages  <- list()        
+
+  while (!done) {
+    tree_file <- file.path(mp03, paste0("nyc_trees_", offset, ".geojson"))
+
+    if (!file.exists(tree_file)) {
+      request(url) |>
+        req_url_query(`$limit` = limit, `$offset` = offset) |>
+        req_retry(max_tries = 5) |>
+        req_perform() |>
+        resp_body_raw() |>
+        writeBin(con = tree_file)
+    }
+
+    tree_page <- sf::st_read(tree_file, quiet = TRUE)
+    n_rows    <- nrow(tree_page)
+
+    if (n_rows == 0) {
+      # nothing here -> stop
+      done <- TRUE
+    } else {
+      # only touch planteddate if it actually exists
+      if ("planteddate" %in% names(tree_page)) {
+        tree_page <- tree_page |>
+          mutate(planteddate = as.character(planteddate))
+      }
+
+      pages[[batch]] <- tree_page
+
+      # if we get fewer rows than limit, we're at the end
+      if (n_rows < limit) {
+        done <- TRUE
+      } else {
+        offset <- offset + limit
+        batch  <- batch + 1L
+      }
+    }
+  }
+  trees_sf <- dplyr::bind_rows(pages)
+  trees_sf
+}
+```
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+
+council_districts <- get_nyc_council_districts(simplify_tol_m = 5)  # or NULL if you want full detail
+
+tree_points <- nyc_trees()
+
+council_districts <- st_transform(council_districts, crs = "WGS84")
+tree_points <- st_transform(tree_points,    crs = "WGS84")
+
+ggplot() +
+  # council district polygons
+  geom_sf(
+    data = council_districts,
+    fill  = NA,
+    color = "grey40",
+    linewidth = 0.3
+  ) +
+  # tree points
+  geom_sf(
+    data = tree_points,
+    color = "darkgreen",
+    alpha = 0.2,
+    size  = 0.1
+  ) +
+  coord_sf() +
+  theme_minimal() +
+  theme(
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank()
+  ) +
+  labs(
+    title = "NYC Street Trees and City Council Districts",
+    subtitle = "2015 Street Tree Census points over City Council district boundaries",
+    x = NULL, y = NULL
+  )
+```
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+tree_districts <- st_join(
+  tree_points,
+  council_districts,
+  join = st_within
+)
+trees_by_district <- tree_districts %>%
+  st_drop_geometry() %>%
+  group_by(CounDist) %>%
+  summarize(n_trees = n()) %>%
+  arrange(desc(n_trees))
+
+trees_by_district[1, ]   # district with the most trees
+```
+```{r}
+names(council_districts)
+```
