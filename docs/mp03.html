@@ -162,8 +162,54 @@ ul.task-list li input[type="checkbox"] {
 </ol>
 <div class="cell">
 <div class="cell-output-display">
-<div class="datatables html-widget html-fill-item" id="htmlwidget-5553ebbc9323ca9c2314" style="width:100%;height:auto;"></div>
-<script type="application/json" data-for="htmlwidget-5553ebbc9323ca9c2314">{"x":{"filter":"none","vertical":false,"caption":"<caption>Top 10 NYC Council Districts by Number of Trees<\/caption>","data":[["1","2","3","4","5","6","7","8","9","10"],[51,50,19,23,13,49,39,31,32,27],[70965,52500,49940,44917,36665,35117,32403,31321,30270,29395]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th> <\/th>\n      <th>Council District<\/th>\n      <th>Tree Count<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"pageLength":10,"autoWidth":true,"columnDefs":[{"className":"dt-right","targets":[1,2]},{"orderable":false,"targets":0},{"name":" ","targets":0},{"name":"Council District","targets":1},{"name":"Tree Count","targets":2}],"order":[],"orderClasses":false}},"evals":[],"jsHooks":[]}</script>
+<div class="datatables html-widget html-fill-item" id="htmlwidget-ad2a7d1578a603c3ad9a" style="width:100%;height:auto;"></div>
+<script type="application/json" data-for="htmlwidget-ad2a7d1578a603c3ad9a">{"x":{"filter":"none","vertical":false,"caption":"<caption>Top 10 NYC Council Districts by Number of Trees<\/caption>","data":[["1","2","3","4","5","6","7","8","9","10"],[51,50,19,23,13,49,39,31,32,27],[70965,52500,49940,44917,36665,35117,32403,31321,30270,29395]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th> <\/th>\n      <th>Council District<\/th>\n      <th>Tree Count<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"pageLength":10,"autoWidth":true,"columnDefs":[{"className":"dt-right","targets":[1,2]},{"orderable":false,"targets":0},{"name":" ","targets":0},{"name":"Council District","targets":1},{"name":"Tree Count","targets":2}],"order":[],"orderClasses":false}},"evals":[],"jsHooks":[]}</script>
+</div>
+</div>
+<div class="cell">
+<div class="cell-output-display">
+<div class="datatables html-widget html-fill-item" id="htmlwidget-ccd6edb1b92137e16a80" style="width:100%;height:auto;"></div>
+<script type="application/json" data-for="htmlwidget-ccd6edb1b92137e16a80">{"x":{"filter":"none","vertical":false,"caption":"<caption>Top 10 NYC Council Districts by Tree Density<\/caption>","data":[["1","2","3","4","5","6","7","8","9","10"],[7,39,2,9,5,16,14,10,35,41],[15648,32403,11563,13455,8326,13497,10905,15309,15109,14416],[55186223.93576999,118294040.3623222,48321708.97441956,56263710.17517462,37752163.23719384,62082568.94205672,52584884.00910233,76998093.42629765,79441182.04492629,79271986.83632563],[0.0002835490251736077,0.0002739191247568602,0.0002392920334444545,0.000239141712448547,0.0002205436532918234,0.0002174040190346682,0.0002073789874313,0.0001988231048169229,0.0001901910270098376,0.0001818549096008529],[283.5490251736077,273.9191247568602,239.2920334444545,239.1417124485471,220.5436532918234,217.4040190346682,207.3789874313,198.8231048169229,190.1910270098376,181.8549096008529]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th> <\/th>\n      <th>Council District<\/th>\n      <th>Tree Count<\/th>\n      <th>Area (m²)<\/th>\n      <th>density_per_m2<\/th>\n      <th>Trees per km²<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"pageLength":10,"autoWidth":true,"columnDefs":[{"className":"dt-right","targets":[1,2,3,4,5]},{"orderable":false,"targets":0},{"name":" ","targets":0},{"name":"Council District","targets":1},{"name":"Tree Count","targets":2},{"name":"Area (m²)","targets":3},{"name":"density_per_m2","targets":4},{"name":"Trees per km²","targets":5}],"order":[],"orderClasses":false}},"evals":[],"jsHooks":[]}</script>
+</div>
+</div>
+<div class="cell">
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 1 × 4
+  CounDist total_trees dead_trees fraction_dead
+     &lt;int&gt;       &lt;int&gt;      &lt;int&gt;         &lt;dbl&gt;
+1       32       30270       4315         0.143</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="cell-output cell-output-stdout">
+<pre><code>                                                genusspecies     n
+1 Gleditsia triacanthos var. inermis - Thornless honeylocust 17310</code></pre>
+</div>
+<div class="cell-output-display">
+<div class="datatables html-widget html-fill-item" id="htmlwidget-78b62024b6f5c1eadc03" style="width:100%;height:auto;"></div>
+<script type="application/json" data-for="htmlwidget-78b62024b6f5c1eadc03">{"x":{"filter":"none","vertical":false,"caption":"<caption>Top 10 Most Common Tree Species in Manhattan<\/caption>","data":[["1","2","3","4","5","6","7","8","9","10"],["Gleditsia triacanthos var. inermis - Thornless honeylocust","Platanus x acerifolia - London planetree","Pyrus calleryana - Callery pear","Quercus palustris - pin oak","Ginkgo biloba - maidenhair tree","Zelkova serrata - Japanese zelkova","Styphnolobium japonicum - Japanese pagoda tree","Tilia cordata - littleleaf linden","Unknown - Unknown","Ulmus americana - American elm"],[17310,11593,8793,8107,7462,5771,5436,4417,3758,3523]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th> <\/th>\n      <th>genusspecies<\/th>\n      <th>n<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"columnDefs":[{"className":"dt-right","targets":2},{"orderable":false,"targets":0},{"name":" ","targets":0},{"name":"genusspecies","targets":1},{"name":"n","targets":2}],"order":[],"autoWidth":false,"orderClasses":false}},"evals":[],"jsHooks":[]}</script>
+</div>
+</div>
+<div class="cell">
+<div class="cell-output cell-output-stdout">
+<pre><code>Simple feature collection with 1 feature and 17 fields
+Geometry type: POINT
+Dimension:     XY
+Bounding box:  xmin: -73.98339 ymin: 40.73987 xmax: -73.98339 ymax: 40.73987
+Geodetic CRS:  WGS 84
+  tpcondition stumpdiameter riskratingdate riskrating objectid
+1   Excellent          &lt;NA&gt;           &lt;NA&gt;       &lt;NA&gt; 13831280
+                              globalid tpstructure
+1 A4848157-A343-4882-8F65-47860793F616        Full
+                 plantingspaceglobalid         createddate dbh
+1 CDA4DC8D-A20D-4E76-8C79-A002C00E5275 2023-05-15 19:02:00   3
+          planteddate updateddate                      genusspecies CounDist
+1 2023-05-03 04:00:00        &lt;NA&gt; Quercus acutissima - sawtooth oak        2
+  Shape_Leng Shape_Area distance_m                   geometry
+1   41619.72   48322121   34.19057 POINT (-73.98339 40.73987)</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] "Quercus acutissima - sawtooth oak"</code></pre>
 </div>
 </div>
 

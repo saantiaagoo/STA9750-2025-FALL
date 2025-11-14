@@ -231,3 +231,117 @@ datatable(
   caption = "Top 10 NYC Council Districts by Number of Trees"
 )
 ```
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+
+district_area <- nyc_council_districts %>%
+  st_transform("EPSG:2263") %>%      
+  mutate(area_m2 = st_area(geometry)) %>%
+  st_drop_geometry() %>%
+  select(CounDist, area_m2)
+
+district_stats <- trees_by_district %>%
+  left_join(district_area, by = "CounDist") %>%
+  mutate(
+    density_per_m2  = n_trees / as.numeric(area_m2),
+    density_per_km2 = density_per_m2 * 1e6 
+  )
+
+top10_density <- district_stats %>%
+  arrange(desc(density_per_km2)) %>%
+  slice(1:10) %>%
+  rename(
+    `Council District` = CounDist,
+    `Tree Count`       = n_trees,
+    `Area (m²)`        = area_m2,
+    `Trees per km²`    = density_per_km2
+  )
+
+datatable(
+  top10_density,
+  rownames = TRUE,
+  options = list(
+    pageLength = 10,
+    autoWidth = TRUE
+  ),
+  caption = "Top 10 NYC Council Districts by Tree Density"
+)
+```
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+dead_stats <- tree_districts %>%
+  st_drop_geometry() %>%
+  group_by(CounDist) %>%
+  summarize(
+    total_trees = n(),
+    dead_trees  = sum(tpcondition == "Dead", na.rm = TRUE),
+    fraction_dead = dead_trees / total_trees
+  ) %>%
+  arrange(desc(fraction_dead))
+
+worst_district <- dead_stats %>% slice(1)
+worst_district
+```
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+tree_boroughs <- tree_districts %>%
+  mutate(
+    borough = case_when(
+      CounDist >= 1  & CounDist <= 10 ~ "Manhattan",
+      CounDist >= 11 & CounDist <= 18 ~ "Bronx",
+      CounDist >= 19 & CounDist <= 32 ~ "Queens",
+      CounDist >= 33 & CounDist <= 48 ~ "Brooklyn",
+      CounDist >= 49 & CounDist <= 51 ~ "Staten Island",
+      TRUE ~ NA_character_
+    )
+  )
+manhattan_trees <- tree_boroughs %>%
+  filter(borough == "Manhattan")
+
+species_counts <- manhattan_trees %>%
+  st_drop_geometry() %>%
+  filter(!is.na(genusspecies)) %>%
+  count(genusspecies, sort = TRUE)
+
+most_common_species <- species_counts %>% slice(1)
+
+
+most_common_species
+
+datatable(
+  species_counts %>% slice(1:10),
+  rownames = TRUE,
+  caption = "Top 10 Most Common Tree Species in Manhattan"
+)
+```
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+new_st_point <- function(lon, lat){
+  st_sfc(st_point(c(lon, lat)), crs = "WGS84")
+}
+
+baruch_point <- new_st_point(
+  lon = -73.98337,
+  lat = 40.740173
+)
+
+tree_districts <- st_transform(tree_districts, crs = "WGS84")
+
+nearest_tree <- tree_districts %>%
+  mutate(
+    distance_m = as.numeric(st_distance(geometry, baruch_point))
+  ) %>%
+  arrange(distance_m) %>%
+  slice(1)
+
+nearest_tree
+nearest_tree$genusspecies   
+```
