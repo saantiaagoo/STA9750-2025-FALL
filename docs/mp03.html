@@ -20,6 +20,41 @@ ul.task-list li input[type="checkbox"] {
   margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
   vertical-align: middle;
 }
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
 </style>
 
 
@@ -130,7 +165,7 @@ ul.task-list li input[type="checkbox"] {
 <p>New York City’s trees are one of our most valuable public resources — cooling our streets, improving air quality, and strengthening the livability of our neighborhoods. But not every community benefits equally. As a City Council member, I want to ensure that historically overlooked districts receive the same green investment as the rest of the city.</p>
 <p>DPR manages nearly 900,000 trees across 30,000 acres of parkland, yet the data shows clear differences in tree density, health, and species diversity across council districts. By analyzing the NYC TreeMap dataset, I aim to highlight where these gaps exist and use that evidence to advocate for targeted funding to expand and maintain our urban forest.</p>
 <p>Investing in trees isn’t just beautification — it’s an issue of equity, public health, and resilience. Every New Yorker deserves clean air, shaded streets, and access to the benefits our city’s trees provide.</p>
-<p>First, let’s take a look at the data and look at all the city council districts by borough.</p>
+<p>First, let’s take a look at the data and look at all the city council districts.</p>
 <div class="cell">
 <div class="cell-output-display">
 <div>
@@ -160,19 +195,106 @@ ul.task-list li input[type="checkbox"] {
 <li>Council district with the highest fraction of dead trees</li>
 <li>The most common tree species in Manhattan</li>
 </ol>
+<p>Let’s begin!</p>
+<p>We are going to run this code below to figure out the council district with the most trees.</p>
 <div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">suppressPackageStartupMessages</span>({</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">library</span>(scales)</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">library</span>(DT)</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>tree_districts <span class="ot">&lt;-</span> <span class="fu">st_join</span>(</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  tree_points,</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  nyc_council_districts,</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">join =</span> st_within    </span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>trees_by_district <span class="ot">&lt;-</span> tree_districts <span class="sc">%&gt;%</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">st_drop_geometry</span>() <span class="sc">%&gt;%</span>      </span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(CounDist) <span class="sc">%&gt;%</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarize</span>(<span class="at">n_trees =</span> <span class="fu">n</span>()) <span class="sc">%&gt;%</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(<span class="fu">desc</span>(n_trees))</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>top_tree_district <span class="ot">&lt;-</span> trees_by_district <span class="sc">%&gt;%</span> <span class="fu">slice_max</span>(n_trees, <span class="at">n =</span> <span class="dv">1</span>)</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>top_tree_district</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 1 × 2
+  CounDist n_trees
+     &lt;int&gt;   &lt;int&gt;
+1       51   70965</code></pre>
+</div>
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>total_trees <span class="ot">&lt;-</span> top_tree_district<span class="sc">$</span>n_trees</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>total_trees_comma <span class="ot">&lt;-</span> <span class="fu">format</span>(total_trees, <span class="at">big.mark =</span> <span class="st">","</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+</div>
+<p>After running the code, we can conclude that it is district 51 with 70,965 trees.</p>
+<p>Next, we will run code to figure the districts with the highest density of trees.</p>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>district_area <span class="ot">&lt;-</span> nyc_council_districts <span class="sc">%&gt;%</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">st_transform</span>(<span class="st">"EPSG:2263"</span>) <span class="sc">%&gt;%</span>      </span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">area_m2 =</span> <span class="fu">st_area</span>(geometry)) <span class="sc">%&gt;%</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">st_drop_geometry</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(CounDist, area_m2)</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>district_stats <span class="ot">&lt;-</span> trees_by_district <span class="sc">%&gt;%</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(district_area, <span class="at">by =</span> <span class="st">"CounDist"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">density_per_m2  =</span> n_trees <span class="sc">/</span> <span class="fu">as.numeric</span>(area_m2),</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">density_per_km2 =</span> density_per_m2 <span class="sc">*</span> <span class="fl">1e6</span> </span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>top10_density <span class="ot">&lt;-</span> district_stats <span class="sc">%&gt;%</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(<span class="fu">desc</span>(density_per_km2)) <span class="sc">%&gt;%</span></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">slice</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(</span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>    <span class="st">`</span><span class="at">Council District</span><span class="st">`</span> <span class="ot">=</span> CounDist,</span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>    <span class="st">`</span><span class="at">Tree Count</span><span class="st">`</span>       <span class="ot">=</span> n_trees,</span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>    <span class="st">`</span><span class="at">Area (m²)</span><span class="st">`</span>        <span class="ot">=</span> area_m2,</span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>    <span class="st">`</span><span class="at">Trees per km²</span><span class="st">`</span>    <span class="ot">=</span> density_per_km2</span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a><span class="fu">datatable</span>(</span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a>  top10_density,</span>
+<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a>  <span class="at">rownames =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a>  <span class="at">options =</span> <span class="fu">list</span>(</span>
+<span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a>    <span class="at">pageLength =</span> <span class="dv">10</span>,</span>
+<span id="cb4-29"><a href="#cb4-29" aria-hidden="true" tabindex="-1"></a>    <span class="at">autoWidth =</span> <span class="cn">TRUE</span></span>
+<span id="cb4-30"><a href="#cb4-30" aria-hidden="true" tabindex="-1"></a>  ),</span>
+<span id="cb4-31"><a href="#cb4-31" aria-hidden="true" tabindex="-1"></a>  <span class="at">caption =</span> <span class="st">"Top 10 NYC Council Districts by Tree Density"</span></span>
+<span id="cb4-32"><a href="#cb4-32" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
 <div class="cell-output-display">
-<div class="datatables html-widget html-fill-item" id="htmlwidget-ad2a7d1578a603c3ad9a" style="width:100%;height:auto;"></div>
-<script type="application/json" data-for="htmlwidget-ad2a7d1578a603c3ad9a">{"x":{"filter":"none","vertical":false,"caption":"<caption>Top 10 NYC Council Districts by Number of Trees<\/caption>","data":[["1","2","3","4","5","6","7","8","9","10"],[51,50,19,23,13,49,39,31,32,27],[70965,52500,49940,44917,36665,35117,32403,31321,30270,29395]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th> <\/th>\n      <th>Council District<\/th>\n      <th>Tree Count<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"pageLength":10,"autoWidth":true,"columnDefs":[{"className":"dt-right","targets":[1,2]},{"orderable":false,"targets":0},{"name":" ","targets":0},{"name":"Council District","targets":1},{"name":"Tree Count","targets":2}],"order":[],"orderClasses":false}},"evals":[],"jsHooks":[]}</script>
+<div class="datatables html-widget html-fill-item" id="htmlwidget-e2eea149f1575490e5f4" style="width:100%;height:auto;"></div>
+<script type="application/json" data-for="htmlwidget-e2eea149f1575490e5f4">{"x":{"filter":"none","vertical":false,"caption":"<caption>Top 10 NYC Council Districts by Tree Density<\/caption>","data":[["1","2","3","4","5","6","7","8","9","10"],[7,39,2,9,5,16,14,10,35,41],[15648,32403,11563,13455,8326,13497,10905,15309,15109,14416],[55186223.93576999,118294040.3623222,48321708.97441956,56263710.17517462,37752163.23719384,62082568.94205672,52584884.00910233,76998093.42629765,79441182.04492629,79271986.83632563],[0.0002835490251736077,0.0002739191247568602,0.0002392920334444545,0.000239141712448547,0.0002205436532918234,0.0002174040190346682,0.0002073789874313,0.0001988231048169229,0.0001901910270098376,0.0001818549096008529],[283.5490251736077,273.9191247568602,239.2920334444545,239.1417124485471,220.5436532918234,217.4040190346682,207.3789874313,198.8231048169229,190.1910270098376,181.8549096008529]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th> <\/th>\n      <th>Council District<\/th>\n      <th>Tree Count<\/th>\n      <th>Area (m²)<\/th>\n      <th>density_per_m2<\/th>\n      <th>Trees per km²<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"pageLength":10,"autoWidth":true,"columnDefs":[{"className":"dt-right","targets":[1,2,3,4,5]},{"orderable":false,"targets":0},{"name":" ","targets":0},{"name":"Council District","targets":1},{"name":"Tree Count","targets":2},{"name":"Area (m²)","targets":3},{"name":"density_per_m2","targets":4},{"name":"Trees per km²","targets":5}],"order":[],"orderClasses":false}},"evals":[],"jsHooks":[]}</script>
 </div>
 </div>
+<p>The table above shows us different characteristics of each district. At the end, you are able to see that district 7 is the most dense area, with about 284 trees per square kilometer.</p>
+<p>The next thing we will try to figure out is the district with the highest fraction of dead trees.</p>
 <div class="cell">
-<div class="cell-output-display">
-<div class="datatables html-widget html-fill-item" id="htmlwidget-ccd6edb1b92137e16a80" style="width:100%;height:auto;"></div>
-<script type="application/json" data-for="htmlwidget-ccd6edb1b92137e16a80">{"x":{"filter":"none","vertical":false,"caption":"<caption>Top 10 NYC Council Districts by Tree Density<\/caption>","data":[["1","2","3","4","5","6","7","8","9","10"],[7,39,2,9,5,16,14,10,35,41],[15648,32403,11563,13455,8326,13497,10905,15309,15109,14416],[55186223.93576999,118294040.3623222,48321708.97441956,56263710.17517462,37752163.23719384,62082568.94205672,52584884.00910233,76998093.42629765,79441182.04492629,79271986.83632563],[0.0002835490251736077,0.0002739191247568602,0.0002392920334444545,0.000239141712448547,0.0002205436532918234,0.0002174040190346682,0.0002073789874313,0.0001988231048169229,0.0001901910270098376,0.0001818549096008529],[283.5490251736077,273.9191247568602,239.2920334444545,239.1417124485471,220.5436532918234,217.4040190346682,207.3789874313,198.8231048169229,190.1910270098376,181.8549096008529]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th> <\/th>\n      <th>Council District<\/th>\n      <th>Tree Count<\/th>\n      <th>Area (m²)<\/th>\n      <th>density_per_m2<\/th>\n      <th>Trees per km²<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"pageLength":10,"autoWidth":true,"columnDefs":[{"className":"dt-right","targets":[1,2,3,4,5]},{"orderable":false,"targets":0},{"name":" ","targets":0},{"name":"Council District","targets":1},{"name":"Tree Count","targets":2},{"name":"Area (m²)","targets":3},{"name":"density_per_m2","targets":4},{"name":"Trees per km²","targets":5}],"order":[],"orderClasses":false}},"evals":[],"jsHooks":[]}</script>
-</div>
-</div>
-<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>dead_stats <span class="ot">&lt;-</span> tree_districts <span class="sc">%&gt;%</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">st_drop_geometry</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(CounDist) <span class="sc">%&gt;%</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarize</span>(</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">total_trees =</span> <span class="fu">n</span>(),</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">dead_trees  =</span> <span class="fu">sum</span>(tpcondition <span class="sc">==</span> <span class="st">"Dead"</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">fraction_dead =</span> dead_trees <span class="sc">/</span> total_trees</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(<span class="fu">desc</span>(fraction_dead))</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>worst_district <span class="ot">&lt;-</span> dead_stats <span class="sc">%&gt;%</span> <span class="fu">slice</span>(<span class="dv">1</span>)</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>worst_district</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 1 × 4
   CounDist total_trees dead_trees fraction_dead
@@ -180,40 +302,94 @@ ul.task-list li input[type="checkbox"] {
 1       32       30270       4315         0.143</code></pre>
 </div>
 </div>
+<p>With the code above, we infer that district 32 has the highest fraction, with 14.3% of their tress being dead.</p>
+<p>Lastly, we will write up code to find the most common tree species in Manhattan.</p>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>tree_boroughs <span class="ot">&lt;-</span> tree_districts <span class="sc">%&gt;%</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">borough =</span> <span class="fu">case_when</span>(</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>      CounDist <span class="sc">&gt;=</span> <span class="dv">1</span>  <span class="sc">&amp;</span> CounDist <span class="sc">&lt;=</span> <span class="dv">10</span> <span class="sc">~</span> <span class="st">"Manhattan"</span>,</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>      CounDist <span class="sc">&gt;=</span> <span class="dv">11</span> <span class="sc">&amp;</span> CounDist <span class="sc">&lt;=</span> <span class="dv">18</span> <span class="sc">~</span> <span class="st">"Bronx"</span>,</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>      CounDist <span class="sc">&gt;=</span> <span class="dv">19</span> <span class="sc">&amp;</span> CounDist <span class="sc">&lt;=</span> <span class="dv">32</span> <span class="sc">~</span> <span class="st">"Queens"</span>,</span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>      CounDist <span class="sc">&gt;=</span> <span class="dv">33</span> <span class="sc">&amp;</span> CounDist <span class="sc">&lt;=</span> <span class="dv">48</span> <span class="sc">~</span> <span class="st">"Brooklyn"</span>,</span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>      CounDist <span class="sc">&gt;=</span> <span class="dv">49</span> <span class="sc">&amp;</span> CounDist <span class="sc">&lt;=</span> <span class="dv">51</span> <span class="sc">~</span> <span class="st">"Staten Island"</span>,</span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>      <span class="cn">TRUE</span> <span class="sc">~</span> <span class="cn">NA_character_</span></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>manhattan_trees <span class="ot">&lt;-</span> tree_boroughs <span class="sc">%&gt;%</span></span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(borough <span class="sc">==</span> <span class="st">"Manhattan"</span>)</span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a>species_counts <span class="ot">&lt;-</span> manhattan_trees <span class="sc">%&gt;%</span></span>
+<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">st_drop_geometry</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="sc">!</span><span class="fu">is.na</span>(genusspecies)) <span class="sc">%&gt;%</span></span>
+<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">count</span>(genusspecies, <span class="at">sort =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a>most_common <span class="ot">&lt;-</span> species_counts <span class="sc">%&gt;%</span> <span class="fu">slice</span>(<span class="dv">1</span>)</span>
+<span id="cb7-21"><a href="#cb7-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-22"><a href="#cb7-22" aria-hidden="true" tabindex="-1"></a>most_common_species <span class="ot">&lt;-</span> most_common<span class="sc">$</span>genusspecies</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+</div>
+<p>As a result, we get the <em>Gleditsia triacanthos var. inermis - Thornless honeylocust</em> species as the most common tree species in Manhattan.</p>
+<p>Before we introduce our tree funding project in our district, one final analysis we did was figuring out the tree species closest to Baruch College.</p>
+<p>We conclude that the <em>Quercus acutissima - sawtooth oak</em> is the nearest tree species to Baruch College.</p>
+<p>Nonetheless, now we are ready to introduce our new tree funding project for district 2!</p>
+<section id="district-2-green-corridor-renewal-plan" class="level3">
+<h3 class="anchored" data-anchor-id="district-2-green-corridor-renewal-plan">District 2 Green Corridor Renewal Plan</h3>
+<p><em>A proposal for renewed canopy coverage, public safety, and neighborhood vitality</em></p>
+<p>New York City’s street trees are an essential piece of its urban infrastructure, shaping the quality of life in every neighborhood. In District 2 — encompassing the East Village, Gramercy, Kips Bay, and parts of the Lower East Side — the continuity of our “green corridors” has steadily deteriorated due to aging trees, sidewalk stress, pollution, and increasingly volatile weather. Dead and declining trees now interrupt once-thriving canopy pathways, reducing shade, weakening stormwater absorption, and creating localized heat zones along major pedestrian routes.</p>
+<p>To address this, I propose the District 2 Green Corridor Renewal Plan, a targeted initiative to remove hazardous dead trees and replant resilient, climate-adaptive replacements in priority locations throughout the district. This plan focuses on restoring canopy continuity along key residential and commercial corridors, improving public safety, beautifying heavily trafficked streets, and ensuring long-term environmental benefits.</p>
+</section>
+<section id="project-scope" class="level2">
+<h2 class="anchored" data-anchor-id="project-scope">Project Scope</h2>
 <div class="cell">
 <div class="cell-output cell-output-stdout">
-<pre><code>                                                genusspecies     n
-1 Gleditsia triacanthos var. inermis - Thornless honeylocust 17310</code></pre>
+<pre><code># A tibble: 1 × 4
+  CounDist total_trees dead_trees fraction_dead
+     &lt;int&gt;       &lt;int&gt;      &lt;int&gt;         &lt;dbl&gt;
+1        2       11563       1576         0.136</code></pre>
 </div>
 <div class="cell-output-display">
-<div class="datatables html-widget html-fill-item" id="htmlwidget-78b62024b6f5c1eadc03" style="width:100%;height:auto;"></div>
-<script type="application/json" data-for="htmlwidget-78b62024b6f5c1eadc03">{"x":{"filter":"none","vertical":false,"caption":"<caption>Top 10 Most Common Tree Species in Manhattan<\/caption>","data":[["1","2","3","4","5","6","7","8","9","10"],["Gleditsia triacanthos var. inermis - Thornless honeylocust","Platanus x acerifolia - London planetree","Pyrus calleryana - Callery pear","Quercus palustris - pin oak","Ginkgo biloba - maidenhair tree","Zelkova serrata - Japanese zelkova","Styphnolobium japonicum - Japanese pagoda tree","Tilia cordata - littleleaf linden","Unknown - Unknown","Ulmus americana - American elm"],[17310,11593,8793,8107,7462,5771,5436,4417,3758,3523]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th> <\/th>\n      <th>genusspecies<\/th>\n      <th>n<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"columnDefs":[{"className":"dt-right","targets":2},{"orderable":false,"targets":0},{"name":" ","targets":0},{"name":"genusspecies","targets":1},{"name":"n","targets":2}],"order":[],"autoWidth":false,"orderClasses":false}},"evals":[],"jsHooks":[]}</script>
+<div>
+<figure class="figure">
+<p><img src="mp03_files/figure-html/unnamed-chunk-10-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
 </div>
 </div>
+</div>
+<p>District 2 contains <em>11,563</em> trees, of which <em>1,576</em> (about <em>13.6%</em>) are dead.</p>
+<p>The proposed renewal effort would:</p>
+<p>Remove all identified dead trees</p>
+<p>Replace them with new plantings, with a recommended buffer of ~20% additional trees to strengthen long-term canopy resilience</p>
+<p>Prioritize replanting along continuous pedestrian corridors, including 1st Avenue, 2nd Avenue, East 14th Street, and residential side streets with limited shade coverage.</p>
+</section>
+<section id="why-district-2-is-the-right-place-for-this-investment" class="level2">
+<h2 class="anchored" data-anchor-id="why-district-2-is-the-right-place-for-this-investment">Why District 2 Is the Right Place for This Investment</h2>
 <div class="cell">
-<div class="cell-output cell-output-stdout">
-<pre><code>Simple feature collection with 1 feature and 17 fields
-Geometry type: POINT
-Dimension:     XY
-Bounding box:  xmin: -73.98339 ymin: 40.73987 xmax: -73.98339 ymax: 40.73987
-Geodetic CRS:  WGS 84
-  tpcondition stumpdiameter riskratingdate riskrating objectid
-1   Excellent          &lt;NA&gt;           &lt;NA&gt;       &lt;NA&gt; 13831280
-                              globalid tpstructure
-1 A4848157-A343-4882-8F65-47860793F616        Full
-                 plantingspaceglobalid         createddate dbh
-1 CDA4DC8D-A20D-4E76-8C79-A002C00E5275 2023-05-15 19:02:00   3
-          planteddate updateddate                      genusspecies CounDist
-1 2023-05-03 04:00:00        &lt;NA&gt; Quercus acutissima - sawtooth oak        2
-  Shape_Leng Shape_Area distance_m                   geometry
-1   41619.72   48322121   34.19057 POINT (-73.98339 40.73987)</code></pre>
-</div>
-<div class="cell-output cell-output-stdout">
-<pre><code>[1] "Quercus acutissima - sawtooth oak"</code></pre>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="mp03_files/figure-html/unnamed-chunk-11-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
 </div>
 </div>
+</div>
+<p>When compared to nearby districts — notably Districts 1, 3, and 4 — District 2 stands out:</p>
+<p>It has a higher fraction of dead trees than at least two adjacent districts</p>
+<p>When adjusting for land area, District 2 shows a notably dense concentration of tree mortality in high-traffic walkable areas</p>
+<p>Sidewalk conditions and aging infrastructure contribute to elevated risk of tree failure, making replacement urgent from a public safety perspective</p>
+<p>Unlike District 3, which retains several mature canopies, District 2’s urban forest is fragmented, with clear gaps along south–north corridors</p>
+<p>These comparisons demonstrate that District 2 faces a uniquely acute challenge and would benefit more from targeted investment than many neighboring districts.</p>
+</section>
+<section id="conclusion" class="level2">
+<h2 class="anchored" data-anchor-id="conclusion">Conclusion</h2>
+<p>The District 2 Green Corridor Renewal Plan aims to restore the shaded, walkable, and environmentally resilient streets that residents deserve. By replacing dead trees with stronger, climate-ready species and focusing on pedestrian corridors, this initiative addresses safety, heat exposure, stormwater management, and long-term canopy continuity. An investment in District 2’s green corridors is an investment in the lives, comfort, and future of its communities.</p>
+<hr>
+<p>Last Updated: Saturday 11 15, 2025 at 07:36AM</p>
 
 
+</section>
 
 </main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">

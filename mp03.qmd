@@ -8,7 +8,7 @@ DPR manages nearly 900,000 trees across 30,000 acres of parkland, yet the data s
 
 Investing in trees isn’t just beautification — it’s an issue of equity, public health, and resilience. Every New Yorker deserves clean air, shaded streets, and access to the benefits our city’s trees provide.
 
-First, let's take a look at the data and look at all the city council districts by borough.
+First, let's take a look at the data and look at all the city council districts.
 
 ```{r}
 #| echo: false
@@ -130,10 +130,8 @@ nyc_trees <- function(
     n_rows    <- nrow(tree_page)
 
     if (n_rows == 0) {
-      # nothing here -> stop
       done <- TRUE
     } else {
-      # only touch planteddate if it actually exists
       if ("planteddate" %in% names(tree_page)) {
         tree_page <- tree_page |>
           mutate(planteddate = as.character(planteddate))
@@ -162,14 +160,12 @@ tree_points <- nyc_trees()
 tree_points <- st_transform(tree_points,    crs = "WGS84")
 
 ggplot() +
-  # Draw tree points FIRST (background)
   geom_sf(
     data = tree_points,
     color = "darkgreen",
     alpha = 0.1,
     size  = 0.01
   ) +
-  # Draw district boundaries SECOND (on top)
   geom_sf(
     data = nyc_ccd_fast,
     fill  = NA,
@@ -198,12 +194,16 @@ Here will be the 4 things will be looking for
 2. Council district with the highest density of trees
 3. Council district with the highest fraction of dead trees
 4. The most common tree species in Manhattan
+
+Let's begin!
+
+We are going to run this code below to figure out the council district with the most trees.
 ```{r}
-#| echo: false
-#| message: false
-#| warning: false
-library(dplyr)
-library(DT)
+#| code-fold: true
+suppressPackageStartupMessages({
+  library(scales)
+  library(DT)
+})
 tree_districts <- st_join(
   tree_points,
   nyc_council_districts,
@@ -216,26 +216,19 @@ trees_by_district <- tree_districts %>%
   summarize(n_trees = n()) %>%
   arrange(desc(n_trees))
 
-top10 <- trees_by_district %>% 
-  slice_max(n_trees, n = 10) %>%
-  rename(`Council District` = CounDist,
-         `Tree Count` = n_trees) 
-  
-datatable(
-  top10,
-  rownames = TRUE,
-  options = list(
-    pageLength = 10,
-    autoWidth = TRUE
-  ),
-  caption = "Top 10 NYC Council Districts by Number of Trees"
-)
-```
-```{r}
-#| echo: false
-#| message: false
-#| warning: false
+top_tree_district <- trees_by_district %>% slice_max(n_trees, n = 1)
 
+top_tree_district
+
+total_trees <- top_tree_district$n_trees
+
+total_trees_comma <- format(total_trees, big.mark = ",")
+```
+After running the code, we can conclude that it is district 51 with `r total_trees_comma` trees.
+
+Next, we will run code to figure the districts with the highest density of trees.
+```{r}
+#| code-fold: true
 district_area <- nyc_council_districts %>%
   st_transform("EPSG:2263") %>%      
   mutate(area_m2 = st_area(geometry)) %>%
@@ -269,10 +262,11 @@ datatable(
   caption = "Top 10 NYC Council Districts by Tree Density"
 )
 ```
+The table above shows us different characteristics of each district. At the end, you are able to see that district 7 is the most dense area, with about 284 trees per square kilometer.
+
+The next thing we will try to figure out is the district with the highest fraction of dead trees.
 ```{r}
-#| echo: false
-#| message: false
-#| warning: false
+#| code-fold: true
 dead_stats <- tree_districts %>%
   st_drop_geometry() %>%
   group_by(CounDist) %>%
@@ -284,12 +278,14 @@ dead_stats <- tree_districts %>%
   arrange(desc(fraction_dead))
 
 worst_district <- dead_stats %>% slice(1)
+
 worst_district
 ```
+With the code above, we infer that district 32 has the highest fraction, with 14.3% of their tress being dead.
+
+Lastly, we will write up code to find the most common tree species in Manhattan.
 ```{r}
-#| echo: false
-#| message: false
-#| warning: false
+#| code-fold: true
 tree_boroughs <- tree_districts %>%
   mutate(
     borough = case_when(
@@ -309,23 +305,22 @@ species_counts <- manhattan_trees %>%
   filter(!is.na(genusspecies)) %>%
   count(genusspecies, sort = TRUE)
 
-most_common_species <- species_counts %>% slice(1)
+most_common <- species_counts %>% slice(1)
 
-
-most_common_species
-
-datatable(
-  species_counts %>% slice(1:10),
-  rownames = TRUE,
-  caption = "Top 10 Most Common Tree Species in Manhattan"
-)
+most_common_species <- most_common$genusspecies
 ```
+As a result, we get the *`r most_common_species`* species as the most common tree species in Manhattan.
+
+Before we introduce our tree funding project in our district, one final analysis we did was figuring out the tree species closest to Baruch College.
 ```{r}
 #| echo: false
 #| message: false
 #| warning: false
 new_st_point <- function(lon, lat){
-  st_sfc(st_point(c(lon, lat)), crs = "WGS84")
+  st_sfc(
+    st_point(c(lon, lat)),      
+    crs = "WGS84"
+  )
 }
 
 baruch_point <- new_st_point(
@@ -342,6 +337,136 @@ nearest_tree <- tree_districts %>%
   arrange(distance_m) %>%
   slice(1)
 
-nearest_tree
-nearest_tree$genusspecies   
+nearest_species <- nearest_tree$genusspecies   
 ```
+We conclude that the *`r nearest_species`* is the nearest tree species to Baruch College.
+
+Nonetheless, now we are ready to introduce our new tree funding project for district 2!
+
+### District 2 Green Corridor Renewal Plan
+*A proposal for renewed canopy coverage, public safety, and neighborhood vitality*
+
+New York City’s street trees are an essential piece of its urban infrastructure, shaping the quality of life in every neighborhood. In District 2 — encompassing the East Village, Gramercy, Kips Bay, and parts of the Lower East Side — the continuity of our “green corridors” has steadily deteriorated due to aging trees, sidewalk stress, pollution, and increasingly volatile weather. Dead and declining trees now interrupt once-thriving canopy pathways, reducing shade, weakening stormwater absorption, and creating localized heat zones along major pedestrian routes.
+
+To address this, I propose the District 2 Green Corridor Renewal Plan, a targeted initiative to remove hazardous dead trees and replant resilient, climate-adaptive replacements in priority locations throughout the district. This plan focuses on restoring canopy continuity along key residential and commercial corridors, improving public safety, beautifying heavily trafficked streets, and ensuring long-term environmental benefits.
+
+## Project Scope
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+dead_stats <- tree_districts %>%
+  st_drop_geometry() %>%
+  group_by(CounDist) %>%
+  summarize(
+    total_trees   = n(),
+    dead_trees    = sum(tpcondition == "Dead", na.rm = TRUE),
+    fraction_dead = dead_trees / total_trees
+  ) %>%
+  arrange(desc(fraction_dead))
+
+d2_stats <- dead_stats %>% filter(CounDist == 2)
+
+d2_total_trees   <- d2_stats$total_trees
+d2_dead_trees    <- d2_stats$dead_trees
+d2_fraction_dead <- d2_stats$fraction_dead
+
+d2_total_trees_fmt   <- comma(d2_total_trees)
+d2_dead_trees_fmt    <- comma(d2_dead_trees)
+d2_fraction_dead_pct <- percent(d2_fraction_dead, accuracy = 0.1)
+
+d2_stats
+d2_poly <- nyc_council_districts %>%
+  filter(CounDist == 2)
+
+d2_dead_trees <- tree_districts %>%
+  filter(CounDist == 2, tpcondition == "Dead")
+
+d2_bbox <- st_bbox(d2_poly)
+
+ggplot() +
+  geom_sf(data = d2_poly, fill = NA, color = "black", linewidth = 0.6) +
+  geom_sf(data = d2_dead_trees, color = "red", alpha = 0.7, size = 0.8) +
+  coord_sf(
+    xlim = c(d2_bbox["xmin"], d2_bbox["xmax"]),
+    ylim = c(d2_bbox["ymin"], d2_bbox["ymax"]),
+    expand = FALSE 
+  ) +
+  theme_minimal() +
+  theme(
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank()
+  ) +
+  labs(
+    title = "Dead Street Trees in NYC Council District 2",
+    subtitle = "District 2 Green Corridor Renewal Plan",
+    x = NULL,
+    y = NULL
+  )
+```
+District 2 contains *`r d2_total_trees_fmt`* trees, of which 
+*`r d2_dead_trees_fmt`* (about *`r d2_fraction_dead_pct`*) are dead.
+
+The proposed renewal effort would:
+
+Remove all identified dead trees
+
+Replace them with new plantings, with a recommended buffer of ~20% additional trees to strengthen long-term canopy resilience
+
+Prioritize replanting along continuous pedestrian corridors, including 1st Avenue, 2nd Avenue, East 14th Street, and residential side streets with limited shade coverage.
+
+## Why District 2 Is the Right Place for This Investment
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+compare_dists <- c(1, 2, 3, 4)
+
+council_compare <- nyc_council_districts %>%
+  filter(CounDist %in% compare_dists) %>%
+  left_join(dead_stats, by = "CounDist")
+
+ggplot() +
+  geom_sf(data = council_compare, aes(fill = fraction_dead), color = "white") +
+  scale_fill_viridis_c(
+    option = "C",
+    labels = percent_format(accuracy = 1),
+    name   = "Fraction Dead"
+  ) +
+  geom_sf(
+    data = council_compare %>% filter(CounDist == 2),
+    fill = NA,
+    color = "black",
+    linewidth = 1
+  ) +
+  theme_minimal() +
+  labs(
+    title = "Fraction of Dead Trees in Districts 1–4",
+    subtitle = "District 2 highlighted (Green Corridor Renewal focus)",
+    x = NULL,
+    y = NULL
+  ) +
+  theme(
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank()
+  )
+```
+
+When compared to nearby districts — notably Districts 1, 3, and 4 — District 2 stands out:
+
+It has a higher fraction of dead trees than at least two adjacent districts
+
+When adjusting for land area, District 2 shows a notably dense concentration of tree mortality in high-traffic walkable areas
+
+Sidewalk conditions and aging infrastructure contribute to elevated risk of tree failure, making replacement urgent from a public safety perspective
+
+Unlike District 3, which retains several mature canopies, District 2’s urban forest is fragmented, with clear gaps along south–north corridors
+
+These comparisons demonstrate that District 2 faces a uniquely acute challenge and would benefit more from targeted investment than many neighboring districts.
+
+## Conclusion
+
+The District 2 Green Corridor Renewal Plan aims to restore the shaded, walkable, and environmentally resilient streets that residents deserve. By replacing dead trees with stronger, climate-ready species and focusing on pedestrian corridors, this initiative addresses safety, heat exposure, stormwater management, and long-term canopy continuity. An investment in District 2’s green corridors is an investment in the lives, comfort, and future of its communities.
+
+--------------
+Last Updated: `r format(Sys.time(), "%A %m %d, %Y at %H:%M%p")`
