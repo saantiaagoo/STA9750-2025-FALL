@@ -95,7 +95,7 @@ ggplot(nyc_ccd_fast) +
 ```
 As you could see, there are 51 city council districts in New York City. 
 
-Once we have visualized all the districts, next we are going to visualize the trees that within each one.
+Once we have visualized all the districts, next we are going to visualize the trees that exist within each one.
 ```{r}
 #| echo: false
 #| message: false
@@ -139,7 +139,6 @@ nyc_trees <- function(
 
       pages[[batch]] <- tree_page
 
-      # if we get fewer rows than limit, we're at the end
       if (n_rows < limit) {
         done <- TRUE
       } else {
@@ -226,7 +225,7 @@ total_trees_comma <- format(total_trees, big.mark = ",")
 ```
 After running the code, we can conclude that it is district 51 with `r total_trees_comma` trees.
 
-Next, we will run code to figure the districts with the highest density of trees.
+Next, we will run code to figure out the districts with the highest density of trees.
 ```{r}
 #| code-fold: true
 district_area <- nyc_council_districts %>%
@@ -375,7 +374,6 @@ d2_total_trees_fmt   <- comma(d2_total_trees)
 d2_dead_trees_fmt    <- comma(d2_dead_trees)
 d2_fraction_dead_pct <- percent(d2_fraction_dead, accuracy = 0.1)
 
-d2_stats
 d2_poly <- nyc_council_districts %>%
   filter(CounDist == 2)
 
@@ -386,7 +384,7 @@ d2_bbox <- st_bbox(d2_poly)
 
 ggplot() +
   geom_sf(data = d2_poly, fill = NA, color = "black", linewidth = 0.6) +
-  geom_sf(data = d2_dead_trees, color = "red", alpha = 0.7, size = 0.8) +
+  geom_sf(data = d2_dead_trees, color = "red", alpha = 0.7, size = 0.6) +
   coord_sf(
     xlim = c(d2_bbox["xmin"], d2_bbox["xmax"]),
     ylim = c(d2_bbox["ymin"], d2_bbox["ymax"]),
@@ -398,29 +396,94 @@ ggplot() +
     panel.grid.minor = element_blank()
   ) +
   labs(
-    title = "Dead Street Trees in NYC Council District 2",
+    title = "Dead Street Trees in District 2",
     subtitle = "District 2 Green Corridor Renewal Plan",
     x = NULL,
     y = NULL
   )
 ```
-District 2 contains *`r d2_total_trees_fmt`* trees, of which 
-*`r d2_dead_trees_fmt`* (about *`r d2_fraction_dead_pct`*) are dead.
+
+In the visualization above, you are able to see all the dead trees located around District 2. The district contains *`r d2_total_trees_fmt`* trees, of which *`r d2_dead_trees_fmt`* (about *`r d2_fraction_dead_pct`*) are dead.
 
 The proposed renewal effort would:
 
-Remove all identified dead trees
+- Remove all identified dead trees
 
-Replace them with new plantings, with a recommended buffer of ~20% additional trees to strengthen long-term canopy resilience
+- Replace them with new plantings, with a recommended buffer of ~20% additional trees to strengthen long-term canopy resilience
 
-Prioritize replanting along continuous pedestrian corridors, including 1st Avenue, 2nd Avenue, East 14th Street, and residential side streets with limited shade coverage.
+- Prioritize replanting along continuous pedestrian corridors, including 1st Avenue, 2nd Avenue, East 14th Street, and residential side streets with limited shade coverage.
 
 ## Why District 2 Is the Right Place for This Investment
+When compared to nearby districts — notably Districts 1, 3, and 4 — District 2 stands out:
 ```{r}
 #| echo: false
 #| message: false
 #| warning: false
 compare_dists <- c(1, 2, 3, 4)
+
+density_compare <- district_stats %>%
+  filter(CounDist %in% compare_dists) %>%
+  mutate(
+    district_label = if_else(CounDist == 2, "District 2", "Other District")
+  )
+
+ggplot(density_compare,
+       aes(x = factor(CounDist),
+           y = density_per_km2,
+           fill = district_label)) +
+  geom_col() +
+  scale_fill_manual(
+    values = c("District 2" = "darkgreen", "Other District" = "grey70")
+  ) +
+  scale_y_continuous(labels = comma_format()) +
+  labs(
+    title = "Tree Density Across Districts 1–4",
+    x = "Council District",
+    y = "Tree Density (per km²)"
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+    panel.grid.minor = element_blank()
+  )
+```
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+
+dead_compare <- dead_stats %>%
+  filter(CounDist %in% compare_dists) %>%
+  mutate(
+    district_label = if_else(CounDist == 2, "District 2", "Other District")
+  )
+
+ggplot(dead_compare,
+       aes(x = factor(CounDist),
+           y = fraction_dead,
+           fill = district_label)) +
+  geom_col() +
+  scale_fill_manual(
+    values = c("District 2" = "firebrick", "Other District" = "grey70")
+  ) +
+  scale_y_continuous(labels = percent_format(accuracy = 1)) +
+  labs(
+    title = "Fraction of Dead Trees Across Districts 1–4",
+    x = "Council District",
+    y = "Fraction of Dead Trees"
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+    panel.grid.minor = element_blank()
+  )
+```
+
+District 2 is the most dense district with trees compared to nearby districts. To go along with the high density, it has the most amount of dead trees, therefore resulting in the highest fraction out of the 4. Below now is a visualization to aid the reader visualize the results from the graphs above on a map.
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
 
 council_compare <- nyc_council_districts %>%
   filter(CounDist %in% compare_dists) %>%
@@ -451,10 +514,6 @@ ggplot() +
     panel.grid.minor = element_blank()
   )
 ```
-
-When compared to nearby districts — notably Districts 1, 3, and 4 — District 2 stands out:
-
-It has a higher fraction of dead trees than at least two adjacent districts
 
 When adjusting for land area, District 2 shows a notably dense concentration of tree mortality in high-traffic walkable areas
 

@@ -176,7 +176,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 </div>
 <p>As you could see, there are 51 city council districts in New York City.</p>
-<p>Once we have visualized all the districts, next we are going to visualize the trees that within each one.</p>
+<p>Once we have visualized all the districts, next we are going to visualize the trees that exist within each one.</p>
 <div class="cell">
 <div class="cell-output-display">
 <div>
@@ -234,7 +234,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </details>
 </div>
 <p>After running the code, we can conclude that it is district 51 with 70,965 trees.</p>
-<p>Next, we will run code to figure the districts with the highest density of trees.</p>
+<p>Next, we will run code to figure out the districts with the highest density of trees.</p>
 <div class="cell">
 <details class="code-fold">
 <summary>Code</summary>
@@ -272,8 +272,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb4-32"><a href="#cb4-32" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output-display">
-<div class="datatables html-widget html-fill-item" id="htmlwidget-e2eea149f1575490e5f4" style="width:100%;height:auto;"></div>
-<script type="application/json" data-for="htmlwidget-e2eea149f1575490e5f4">{"x":{"filter":"none","vertical":false,"caption":"<caption>Top 10 NYC Council Districts by Tree Density<\/caption>","data":[["1","2","3","4","5","6","7","8","9","10"],[7,39,2,9,5,16,14,10,35,41],[15648,32403,11563,13455,8326,13497,10905,15309,15109,14416],[55186223.93576999,118294040.3623222,48321708.97441956,56263710.17517462,37752163.23719384,62082568.94205672,52584884.00910233,76998093.42629765,79441182.04492629,79271986.83632563],[0.0002835490251736077,0.0002739191247568602,0.0002392920334444545,0.000239141712448547,0.0002205436532918234,0.0002174040190346682,0.0002073789874313,0.0001988231048169229,0.0001901910270098376,0.0001818549096008529],[283.5490251736077,273.9191247568602,239.2920334444545,239.1417124485471,220.5436532918234,217.4040190346682,207.3789874313,198.8231048169229,190.1910270098376,181.8549096008529]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th> <\/th>\n      <th>Council District<\/th>\n      <th>Tree Count<\/th>\n      <th>Area (m²)<\/th>\n      <th>density_per_m2<\/th>\n      <th>Trees per km²<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"pageLength":10,"autoWidth":true,"columnDefs":[{"className":"dt-right","targets":[1,2,3,4,5]},{"orderable":false,"targets":0},{"name":" ","targets":0},{"name":"Council District","targets":1},{"name":"Tree Count","targets":2},{"name":"Area (m²)","targets":3},{"name":"density_per_m2","targets":4},{"name":"Trees per km²","targets":5}],"order":[],"orderClasses":false}},"evals":[],"jsHooks":[]}</script>
+<div class="datatables html-widget html-fill-item" id="htmlwidget-faaf4159818cfe2ddd46" style="width:100%;height:auto;"></div>
+<script type="application/json" data-for="htmlwidget-faaf4159818cfe2ddd46">{"x":{"filter":"none","vertical":false,"caption":"<caption>Top 10 NYC Council Districts by Tree Density<\/caption>","data":[["1","2","3","4","5","6","7","8","9","10"],[7,39,2,9,5,16,14,10,35,41],[15648,32403,11563,13455,8326,13497,10905,15309,15109,14416],[55186223.93576999,118294040.3623222,48321708.97441956,56263710.17517462,37752163.23719384,62082568.94205672,52584884.00910233,76998093.42629765,79441182.04492629,79271986.83632563],[0.0002835490251736077,0.0002739191247568602,0.0002392920334444545,0.000239141712448547,0.0002205436532918234,0.0002174040190346682,0.0002073789874313,0.0001988231048169229,0.0001901910270098376,0.0001818549096008529],[283.5490251736077,273.9191247568602,239.2920334444545,239.1417124485471,220.5436532918234,217.4040190346682,207.3789874313,198.8231048169229,190.1910270098376,181.8549096008529]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th> <\/th>\n      <th>Council District<\/th>\n      <th>Tree Count<\/th>\n      <th>Area (m²)<\/th>\n      <th>density_per_m2<\/th>\n      <th>Trees per km²<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"pageLength":10,"autoWidth":true,"columnDefs":[{"className":"dt-right","targets":[1,2,3,4,5]},{"orderable":false,"targets":0},{"name":" ","targets":0},{"name":"Council District","targets":1},{"name":"Tree Count","targets":2},{"name":"Area (m²)","targets":3},{"name":"density_per_m2","targets":4},{"name":"Trees per km²","targets":5}],"order":[],"orderClasses":false}},"evals":[],"jsHooks":[]}</script>
 </div>
 </div>
 <p>The table above shows us different characteristics of each district. At the end, you are able to see that district 7 is the most dense area, with about 284 trees per square kilometer.</p>
@@ -344,12 +344,6 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="project-scope" class="level2">
 <h2 class="anchored" data-anchor-id="project-scope">Project Scope</h2>
 <div class="cell">
-<div class="cell-output cell-output-stdout">
-<pre><code># A tibble: 1 × 4
-  CounDist total_trees dead_trees fraction_dead
-     &lt;int&gt;       &lt;int&gt;      &lt;int&gt;         &lt;dbl&gt;
-1        2       11563       1576         0.136</code></pre>
-</div>
 <div class="cell-output-display">
 <div>
 <figure class="figure">
@@ -358,14 +352,17 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 </div>
 </div>
-<p>District 2 contains <em>11,563</em> trees, of which <em>1,576</em> (about <em>13.6%</em>) are dead.</p>
+<p>In the visualization above, you are able to see all the dead trees located around District 2. The district contains <em>11,563</em> trees, of which <em>1,576</em> (about <em>13.6%</em>) are dead.</p>
 <p>The proposed renewal effort would:</p>
-<p>Remove all identified dead trees</p>
-<p>Replace them with new plantings, with a recommended buffer of ~20% additional trees to strengthen long-term canopy resilience</p>
-<p>Prioritize replanting along continuous pedestrian corridors, including 1st Avenue, 2nd Avenue, East 14th Street, and residential side streets with limited shade coverage.</p>
+<ul>
+<li><p>Remove all identified dead trees</p></li>
+<li><p>Replace them with new plantings, with a recommended buffer of ~20% additional trees to strengthen long-term canopy resilience</p></li>
+<li><p>Prioritize replanting along continuous pedestrian corridors, including 1st Avenue, 2nd Avenue, East 14th Street, and residential side streets with limited shade coverage.</p></li>
+</ul>
 </section>
 <section id="why-district-2-is-the-right-place-for-this-investment" class="level2">
 <h2 class="anchored" data-anchor-id="why-district-2-is-the-right-place-for-this-investment">Why District 2 Is the Right Place for This Investment</h2>
+<p>When compared to nearby districts — notably Districts 1, 3, and 4 — District 2 stands out:</p>
 <div class="cell">
 <div class="cell-output-display">
 <div>
@@ -375,8 +372,25 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 </div>
 </div>
-<p>When compared to nearby districts — notably Districts 1, 3, and 4 — District 2 stands out:</p>
-<p>It has a higher fraction of dead trees than at least two adjacent districts</p>
+<div class="cell">
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="mp03_files/figure-html/unnamed-chunk-12-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>District 2 is the most dense district with trees compared to nearby districts. To go along with the high density, it has the most amount of dead trees, therefore resulting in the highest fraction out of the 4. Below now is a visualization to aid the reader visualize the results from the graphs above on a map.</p>
+<div class="cell">
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="mp03_files/figure-html/unnamed-chunk-13-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
 <p>When adjusting for land area, District 2 shows a notably dense concentration of tree mortality in high-traffic walkable areas</p>
 <p>Sidewalk conditions and aging infrastructure contribute to elevated risk of tree failure, making replacement urgent from a public safety perspective</p>
 <p>Unlike District 3, which retains several mature canopies, District 2’s urban forest is fragmented, with clear gaps along south–north corridors</p>
@@ -386,7 +400,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h2 class="anchored" data-anchor-id="conclusion">Conclusion</h2>
 <p>The District 2 Green Corridor Renewal Plan aims to restore the shaded, walkable, and environmentally resilient streets that residents deserve. By replacing dead trees with stronger, climate-ready species and focusing on pedestrian corridors, this initiative addresses safety, heat exposure, stormwater management, and long-term canopy continuity. An investment in District 2’s green corridors is an investment in the lives, comfort, and future of its communities.</p>
 <hr>
-<p>Last Updated: Saturday 11 15, 2025 at 07:36AM</p>
+<p>Last Updated: Saturday 11 15, 2025 at 21:32PM</p>
 
 
 </section>
