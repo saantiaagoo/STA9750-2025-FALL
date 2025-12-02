@@ -1,0 +1,458 @@
+---
+title: "Facts are Facts"
+format: html
+---
+On August 1, 2025, President Donald Trump announced on Truth Social that he had directed his staff to fire Dr. Erika McEntarfer, the Commissioner of Labor Statistics. As head of the Bureau of Labor Statistics (BLS), Dr. McEntarfer oversaw all of the agency’s statistical programs and reports—none more closely watched than the Monthly Current Employment Statistics (CES) release, commonly referred to as “the jobs number.” This monthly report consistently moves financial markets, is analyzed by economists, investors, and business leaders, and is often treated by politicians and commentators as a central indicator of economic health.
+
+The abrupt dismissal drew immediate criticism from economists across the political spectrum, who warned that even the perception of political interference could undermine long-term trust in BLS data. Supporters of the President’s decision highlighted recent CES revisions as evidence of potential problems, while defenders of BLS and Dr. McEntarfer acknowledged the agency’s methodological challenges but rejected the idea that they were politically motivated. As a former BLS Commissioner noted, the Commissioner has little to no ability to view or alter CES figures before release, and revisions are a normal, expected part of the process.
+
+In this report, we will assess the truthfulness of these competing claims by conducting a fact check through various different analysis of BLS data sets.
+
+# 1st Step
+We will acquire the dataset of the CES estimates of total employment level of the United States and the dataset that shows the cylce-to-cycle revision of the CES estimate.
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+
+library(httr2)
+library(rvest)
+library(dplyr)
+library(tidyr)
+library(stringr)
+library(lubridate)
+library(readr)
+library(purrr)
+
+if(!dir.exists(file.path("data", "mp04"))){
+  dir.create(file.path("data", "mp04"), showWarnings = FALSE, recursive = TRUE)
+}
+get_ces <- function() {
+  resp <- request("https://data.bls.gov/pdq/SurveyOutputServlet") |>
+    req_method("POST") |>
+    req_body_form(
+      request_action = "get_data", reformat = "true", from_results_page = "true",
+      from_year = "1979", to_year = "2025", initial_request = "false", data_tool = "surveymost",
+      series_id = "CES0000000001", original_annualAveragesRequested = "false") |>
+    req_perform()
+
+  tables <- resp_body_html(resp) |>
+    html_elements("table")
+
+  tbl <- tables |>
+    map(~ html_table(.x, fill = TRUE)) |>
+    keep(~ ncol(.x) > 5) |>
+    first()
+
+  ces_level <- tbl |>
+    mutate(Year = as.integer(Year)) |>
+    pivot_longer(cols = -Year, names_to = "month", values_to = "level") |>
+    mutate(month = str_sub(month, 1, 3), date  = ym(paste(Year, month)), level = as.numeric(str_replace(level, ",", ""))
+    ) |>
+    drop_na(level, date) |>
+    arrange(date) |>
+    select(date, level) |>
+    filter(date <= as.Date("2025-06-01"))
+
+  ces_level
+}
+ces <- get_ces()
+head(ces, 2)
+```
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+library(tibble)
+
+resp <- request("https://www.bls.gov/web/empsit/cesnaicsrev.htm")
+resp <- req_user_agent(resp, "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+resp <- req_headers(resp, "Referer" = "https://www.bls.gov/")
+resp <- req_perform(resp)
+
+page_html <- resp_body_html(resp)
+
+tables_raw <- html_elements(page_html, "table") |> 
+  map(function(tbl) html_table(tbl, header = FALSE, fill = TRUE))
+
+get_ces_revisions_year <- function(year) {
+  year_table <- tables_raw |>
+    keep(function(x) {
+      if (ncol(x) < 5) return(FALSE)
+      yr_col <- suppressWarnings(as.integer(x[[2]]))
+      any(yr_col == year, na.rm = TRUE)
+    }) |>
+    first()
+  
+  year_tbl <- as_tibble(year_table)
+  names(year_tbl) <- paste0("V", seq_len(ncol(year_tbl)))
+  
+  out <- year_tbl |>
+    mutate(year_num = suppressWarnings(as.integer(V2))) |>
+    filter(year_num == year) |>
+    slice(1:12) |>
+    transmute(date     = ym(paste(year_num, month.abb[row_number()])), original = as.numeric(str_replace_all(V3, ",", "")),  
+      final    = as.numeric(str_replace_all(V5, ",", "")), revision = final - original)
+
+  out
+}
+
+all_years <- 1979:2025
+
+ces_revisions <- map_dfr(all_years, get_ces_revisions_year) |>
+  filter(date <= as.Date("2025-06-01")) |>
+  arrange(date)
+
+head(ces_revisions, 2)
+```
+# 2nd Step
+We will now explore the data in various ways.
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+library(ggplot2)
+library(stringr)
+ces %>%
+  mutate(year = year(date)) %>%
+  ggplot(aes(x = date, y = level)) +
+  geom_col(fill = "steelblue") +
+  labs(
+    title = "U.S. Employment Level (1979–2025)",
+    subtitle = "Total Nonfarm Payroll Employment (thousands)",
+    x = "Year",
+    y = "Employment Level"
+  ) +
+  theme_minimal(base_size = 14)
+percent_increase <- ces %>%
+  arrange(date) %>%
+  summarize(first_level = first(level), last_level  = last(level), pct_change  = (last_level - first_level) / first_level * 100)
+
+percent_increase
+
+annual_levels <- ces %>%
+  mutate(year = year(date)) %>%
+  group_by(year) %>%
+  summarize(level = last(level), .groups = "drop")
+
+annual_change <- annual_levels %>%
+  mutate(change = level - lag(level),
+         direction = case_when(
+           is.na(change) ~ NA_character_,
+           change > 0 ~ "Increase",
+           change < 0 ~ "Decrease",
+           TRUE ~ "No Change"
+         ))
+
+annual_change <- annual_change %>%
+  mutate(decade = paste0(floor(year / 10) * 10, "s"))
+
+decade_summary <- annual_change %>%
+  filter(!is.na(direction), direction != "No Change") %>%
+  count(decade, direction) %>%
+  pivot_wider(names_from = direction, values_from = n, values_fill = 0)
+
+plot_data <- decade_summary %>%
+  pivot_longer(cols = c("Increase", "Decrease"), names_to = "type", values_to = "count")
+
+ggplot(plot_data, aes(x = decade, y = count, fill = type)) +
+  geom_col(position = "dodge") +
+  scale_y_continuous(breaks = seq(0, max(plot_data$count), by = 2)) +
+  labs(title = "Employment Levels by Decade", x = "Decade", y = "Number of Years", fill = "Employment Direction") +
+  theme_minimal(base_size = 14)
+emp_yearly <- ces %>%
+  mutate(year = year(date)) %>%
+  group_by(year) %>%
+  summarize(avg_level = mean(level, na.rm = TRUE), pct_change_emp = (avg_level - lag(avg_level)) / lag(avg_level),
+    .groups = "drop")
+
+```
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+ces_joined <- inner_join(
+  ces,
+  ces_revisions,
+  by = "date"
+)
+```
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+
+rev_yearly <- ces_revisions %>%
+  mutate(year = lubridate::year(date)) %>%
+  group_by(year) %>%
+  summarize(avg_revision = mean(revision, na.rm = TRUE))
+
+max_point <- rev_yearly %>% filter(avg_revision == max(avg_revision))
+min_point <- rev_yearly %>% filter(avg_revision == min(avg_revision))
+
+ggplot(rev_yearly, aes(x = year, y = avg_revision)) +
+  geom_line(color = "steelblue", linewidth = 1) +
+  geom_point(color = "darkred", size = 2) +
+  
+  geom_point(data = max_point, aes(x = year, y = avg_revision), color = "forestgreen", size = 4) +
+  geom_point(data = min_point, aes(x = year, y = avg_revision), color = "purple", size = 4) +
+  
+  geom_hline(yintercept = 0, linetype = "dashed", color = "gray40") +
+  labs(
+    title = "Average CES Revision Per Year (1979–2025)",
+    x = "Year", y = "Average Monthly Revision") +
+  theme_minimal(base_size = 14)
+
+top10_positive <- ces_revisions %>%
+  arrange(desc(revision)) %>%
+  slice(1:10)
+top10_negative <- ces_revisions %>%
+  arrange(revision) %>%   
+  slice(1:10)
+
+top10_positive
+
+top10_negative
+```
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+ces_joined <- ces_joined %>%
+  mutate(
+    pct_revision = (revision / level) * 100 
+  )
+rev_pct_yearly <- ces_joined %>%
+  mutate(year = year(date)) %>%
+  group_by(year) %>%
+  summarize(
+    avg_pct = mean(pct_revision, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+ggplot(rev_pct_yearly, aes(x = year, y = avg_pct)) +
+  geom_line(color = "steelblue", linewidth = 1) +
+  geom_point(color = "darkred", size = 1.8) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "gray50") +
+  labs(
+    title = "Average CES Revision as % of Employment Level (Signed, 1979–2025)",
+    x = "Year",
+    y = "Average Monthly Revision (%)"
+  ) +
+  theme_minimal(base_size = 14)
+top_pos <- ces_joined %>%
+  arrange(desc(pct_revision)) %>%
+  slice(1:10)
+
+top_neg <- ces_joined %>%
+  arrange(pct_revision) %>%
+  slice(1:10) 
+
+top_pos
+
+top_neg
+```
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+rev_monthly <- ces_revisions %>%
+  mutate(
+    year      = year(date),
+    month_num = month(date)
+  ) %>%
+  group_by(year, month_num) %>%
+  summarize(
+    revision = mean(revision, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    month_label = factor(
+      month_num,
+      levels = 1:12,
+      labels = month.abb
+    )
+  )
+
+ggplot(rev_monthly, aes(x = month_label, y = revision, group = year)) +
+  # all years in light gray
+  geom_line(color = "grey75", alpha = 0.5) +
+  
+  # highlight 2008 (most negative) in red
+  geom_line(
+    data = dplyr::filter(rev_monthly, year == 2008),
+    aes(x = month_label, y = revision, group = year),
+    color = "red",
+    linewidth = 1.2
+  ) +
+  
+  # highlight 2021 (most positive) in blue
+  geom_line(
+    data = dplyr::filter(rev_monthly, year == 2021),
+    aes(x = month_label, y = revision, group = year),
+    color = "blue",
+    linewidth = 1.2
+  ) +
+  
+  labs(
+    title = "Monthly CES Revisions by Year",
+    subtitle = "Red = 2008 (most negative year), Blue = 2021 (most positive year)",
+    x = "Month",
+    y = "Revision (thousands of jobs)"
+  ) +
+  theme_minimal(base_size = 14)
+
+rev_positive_pct <- ces_revisions %>%
+   mutate(
+    year = year(date),
+    is_positive = revision > 0
+  ) %>%
+  group_by(year) %>%
+  summarize(
+    total_months = n(),
+    positive_months = sum(is_positive, na.rm = TRUE),
+    pct_positive = (positive_months / total_months) * 100,
+    .groups = "drop"
+  ) %>%
+  arrange(desc(pct_positive)) %>%
+  slice(1:10)
+rev_positive_pct
+neg_years <- ces_joined %>%
+  mutate(year = year(date)) %>%
+  group_by(year) %>%
+  summarize(
+    total_negative_revisions = sum(revision < 0, na.rm = TRUE),
+    total_months = n(),
+    pct_negative = total_negative_revisions / total_months * 100,
+    .groups = "drop"
+  ) %>%
+  arrange(desc(total_negative_revisions)) %>%
+  slice(1:10)
+
+neg_years
+rev_decade <- ces_joined %>%
+  mutate(
+    year = year(date),
+    decade = paste0(floor(year / 10) * 10, "s"),   # ex: 1980s, 1990s
+    positive = revision > 0                        # TRUE/FALSE
+  ) %>%
+  group_by(decade) %>%
+  summarize(
+    total_months = n(),
+    positive_months = sum(positive, na.rm = TRUE),
+    pct_positive = (positive_months / total_months) * 100,
+    .groups = "drop"
+  ) %>%
+  arrange(decade)
+
+rev_decade
+```
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+
+highlight_years <- c(2024, 2020, 2016, 2012, 2008, 2004, 2000, 1996, 1992, 1988, 1984, 1980)
+
+# Years immediately after
+highlight_next_years <- highlight_years + 1
+
+# --- Compute average revision per year ---
+rev_yearly <- ces_revisions %>%
+  mutate(year = year(date)) %>%
+  group_by(year) %>%
+  summarize(avg_revision = mean(revision, na.rm = TRUE), .groups = "drop")
+
+# --- Categorize for highlighting ---
+rev_yearly <- rev_yearly %>%
+  mutate(
+    category = case_when(
+      year %in% highlight_years ~ "Highlighted Years",
+      year %in% highlight_next_years ~ "Following Years",
+      TRUE ~ "Other Years"
+    )
+  )
+
+# --- Plot ---
+ggplot(rev_yearly, aes(x = year, y = avg_revision, color = category, group = 1)) +
+  geom_line(color = "gray60") +
+  
+  # Points by category
+   geom_point(data = subset(rev_yearly, category == "Highlighted Years"),
+             color = "blue", size = 4) +
+  geom_point(data = subset(rev_yearly, category == "Following Years"),
+             color = "orange", size = 4) +
+
+  geom_hline(yintercept = 0, linetype = "dashed", color = "gray40") +
+  
+  labs(
+    title = "Average CES Revision by Year (1979–2025)",
+    subtitle = "Blue = Election Year, Orange = Following Year",
+    x = "Year",
+    y = "Average Revision (Final – Original, Thousands)"
+  ) +
+  theme_minimal(base_size = 14)
+```
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+pres_terms <- tibble(
+  president = c(
+    "Reagan", "Bush Sr", "Clinton", "Bush Jr",
+    "Obama", "Trump", "Biden"
+  ),
+  start = as.Date(c(
+    "1981-01-01", "1989-01-01", "1993-01-01",
+    "2001-01-01", "2009-01-01", "2017-01-01", "2021-01-01"
+  )),
+  end = as.Date(c(
+    "1988-12-01", "1992-12-01", "2000-12-01",
+    "2008-12-01", "2016-12-01", "2020-12-01", "2024-12-01"
+  ))
+)
+
+# --- Function: compute jobs added for a single presidency ---
+jobs_per_president <- function(start_date, end_date) {
+  df <- ces %>%
+    filter(date >= start_date, date <= end_date) %>%
+    arrange(date)
+
+  start_level <- first(df$level)
+  end_level   <- last(df$level)
+
+  jobs_added <- end_level - start_level
+  return(jobs_added)
+}
+
+# --- Apply function to each presidency ---
+pres_results <- pres_terms %>%
+  rowwise() %>%
+  mutate(jobs_added = jobs_per_president(start, end)) %>%
+  ungroup() %>%
+  arrange(desc(jobs_added))
+
+pres_results
+presidents <- tibble(
+  president = c("Reagan", "Bush Sr.", "Clinton", "Bush Jr.", "Obama", "Trump", "Biden"),
+  start = ymd(c("1981-01-01", "1989-01-01", "1993-01-01", "2001-01-01",
+                "2009-01-01", "2017-01-01", "2021-01-01")),
+  end = ymd(c("1981-04-01", "1989-04-01", "1993-04-01", "2001-04-01",
+              "2009-04-01", "2017-04-01", "2021-04-01"))
+)
+
+# Compute jobs added in the first ~100 days
+first_100_days <- presidents %>%
+  rowwise() %>%
+  mutate(
+    start_level = ces %>% filter(date == start) %>% pull(level),
+    end_level   = ces %>% filter(date == end) %>% pull(level),
+    jobs_added  = end_level - start_level
+  ) %>%
+  ungroup()%>%
+  arrange(desc(jobs_added))
+
+first_100_days
+```
+Last Updated: `r format(Sys.time(), "%A %m %d, %Y at %H:%M%p")`
