@@ -629,8 +629,8 @@ rev_windows <- rev_ordered %>%
     window_sum = slide_dbl(
       revision,
       sum,
-      .before = 5,         # include current month + previous 5
-      .complete = TRUE     # skip windows with fewer than 6 months
+      .before = 5,         
+      .complete = TRUE     
     )
   ) %>%
   mutate(
@@ -639,13 +639,12 @@ rev_windows <- rev_ordered %>%
   ) %>%
   filter(!is.na(window_sum))
 
-# Top 10 worst (most negative) windows
-worst_15_windows <- rev_windows %>%
+worst_20_windows <- rev_windows %>%
   arrange(window_sum) %>%
-  slice(1:15) %>%
+  slice(1:20) %>%
   select(window_start, window_end, window_sum)
 
-worst_15_windows
+worst_20_windows
 ```
 
 **Political Fact-o-Meter** - False
