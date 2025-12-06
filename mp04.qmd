@@ -9,7 +9,7 @@ The abrupt dismissal drew immediate criticism from economists across the politic
 In this report, we will assess the truthfulness of these competing claims by conducting a fact check through various different analysis of BLS data sets.
 
 # 1st Step
-We will acquire the dataset of the CES estimates of total employment level of the United States and the dataset that shows the cylce-to-cycle revision of the CES estimate.
+Data Ingestion - we will acquire the dataset of the CES estimates of total employment level of the United States and the dataset that shows the cylce-to-cycle revision of the CES estimate.
 
 ```{r}
 #| echo: false
@@ -107,7 +107,9 @@ ces_revisions <- map_dfr(all_years, get_ces_revisions_year) |>
 head(ces_revisions, 2)
 ```
 # 2nd Step
-We will now explore the data in various ways.
+Data Exploration - we will now explore the data in various ways.
+
+These first two visualizations show the changes in total employment since 1979.
 ```{r}
 #| echo: false
 #| message: false
@@ -125,11 +127,6 @@ ces %>%
     y = "Employment Level"
   ) +
   theme_minimal(base_size = 14)
-percent_increase <- ces %>%
-  arrange(date) %>%
-  summarize(first_level = first(level), last_level  = last(level), pct_change  = (last_level - first_level) / first_level * 100)
-
-percent_increase
 
 annual_levels <- ces %>%
   mutate(year = year(date)) %>%
@@ -168,6 +165,88 @@ emp_yearly <- ces %>%
     .groups = "drop")
 
 ```
+
+Now, we will take a look at the jobs added by each President during the duration of their service.
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+pres_terms <- tibble(
+  president = c(
+    "Reagan", "Bush Sr", "Clinton", "Bush Jr",
+    "Obama", "Trump", "Biden"
+  ),
+  start = as.Date(c(
+    "1981-01-01", "1989-01-01", "1993-01-01",
+    "2001-01-01", "2009-01-01", "2017-01-01", "2021-01-01"
+  )),
+  end = as.Date(c(
+    "1988-12-01", "1992-12-01", "2000-12-01",
+    "2008-12-01", "2016-12-01", "2020-12-01", "2024-12-01"
+  ))
+)
+
+jobs_per_president <- function(start_date, end_date) {
+  df <- ces %>%
+    filter(date >= start_date, date <= end_date) %>%
+    arrange(date)
+
+  start_level <- first(df$level)
+  end_level   <- last(df$level)
+
+  jobs_added <- end_level - start_level
+  return(jobs_added)
+}
+
+pres_results <- pres_terms %>%
+  rowwise() %>%
+  mutate(jobs_added = jobs_per_president(start, end)) %>%
+  ungroup() %>%
+  arrange(desc(jobs_added))
+
+pres_results
+```
+
+Next we will get more specific and look at the first 100 days of each presidency to view jobs added during that timeframe.
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+presidents <- tibble(
+  president = c("Reagan", "Bush Sr.", "Clinton", "Bush Jr.", "Obama", "Trump", "Biden"),
+  start = ymd(c("1981-01-01", "1989-01-01", "1993-01-01", "2001-01-01",
+                "2009-01-01", "2017-01-01", "2021-01-01")),
+  end = ymd(c("1981-04-01", "1989-04-01", "1993-04-01", "2001-04-01",
+              "2009-04-01", "2017-04-01", "2021-04-01"))
+)
+
+first_100_days <- presidents %>%
+  rowwise() %>%
+  mutate(
+    start_level = ces %>% filter(date == start) %>% pull(level),
+    end_level   = ces %>% filter(date == end) %>% pull(level),
+    jobs_added  = end_level - start_level
+  ) %>%
+  ungroup()%>%
+  arrange(desc(jobs_added))
+
+first_100_days
+```
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+percent_increase <- ces %>%
+  arrange(date) %>%
+  summarize(first_level = first(level), last_level  = last(level), pct_change  = (last_level - first_level) / first_level * 100)
+
+percent_increase
+```
+
+After viewing the numbers, we conclude that employment has increased almost 80% since 1979.
+
+Next, we will take a look at CES revisions.
+
 ```{r}
 #| echo: false
 #| message: false
@@ -203,7 +282,12 @@ ggplot(rev_yearly, aes(x = year, y = avg_revision)) +
     title = "Average CES Revision Per Year (1979–2025)",
     x = "Year", y = "Average Monthly Revision") +
   theme_minimal(base_size = 14)
-
+```
+Below are the top 10 months with the highest positive and negative revisions.
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
 top10_positive <- ces_revisions %>%
   arrange(desc(revision)) %>%
   slice(1:10)
@@ -355,16 +439,13 @@ rev_decade
 
 highlight_years <- c(2024, 2020, 2016, 2012, 2008, 2004, 2000, 1996, 1992, 1988, 1984, 1980)
 
-# Years immediately after
 highlight_next_years <- highlight_years + 1
 
-# --- Compute average revision per year ---
 rev_yearly <- ces_revisions %>%
   mutate(year = year(date)) %>%
   group_by(year) %>%
   summarize(avg_revision = mean(revision, na.rm = TRUE), .groups = "drop")
 
-# --- Categorize for highlighting ---
 rev_yearly <- rev_yearly %>%
   mutate(
     category = case_when(
@@ -394,65 +475,47 @@ ggplot(rev_yearly, aes(x = year, y = avg_revision, color = category, group = 1))
   ) +
   theme_minimal(base_size = 14)
 ```
+
 ```{r}
 #| echo: false
 #| message: false
 #| warning: false
-pres_terms <- tibble(
-  president = c(
-    "Reagan", "Bush Sr", "Clinton", "Bush Jr",
-    "Obama", "Trump", "Biden"
-  ),
-  start = as.Date(c(
-    "1981-01-01", "1989-01-01", "1993-01-01",
-    "2001-01-01", "2009-01-01", "2017-01-01", "2021-01-01"
-  )),
-  end = as.Date(c(
-    "1988-12-01", "1992-12-01", "2000-12-01",
-    "2008-12-01", "2016-12-01", "2020-12-01", "2024-12-01"
-  ))
-)
-
-# --- Function: compute jobs added for a single presidency ---
-jobs_per_president <- function(start_date, end_date) {
-  df <- ces %>%
-    filter(date >= start_date, date <= end_date) %>%
-    arrange(date)
-
-  start_level <- first(df$level)
-  end_level   <- last(df$level)
-
-  jobs_added <- end_level - start_level
-  return(jobs_added)
-}
-
-# --- Apply function to each presidency ---
-pres_results <- pres_terms %>%
-  rowwise() %>%
-  mutate(jobs_added = jobs_per_president(start, end)) %>%
-  ungroup() %>%
-  arrange(desc(jobs_added))
-
-pres_results
-presidents <- tibble(
-  president = c("Reagan", "Bush Sr.", "Clinton", "Bush Jr.", "Obama", "Trump", "Biden"),
-  start = ymd(c("1981-01-01", "1989-01-01", "1993-01-01", "2001-01-01",
-                "2009-01-01", "2017-01-01", "2021-01-01")),
-  end = ymd(c("1981-04-01", "1989-04-01", "1993-04-01", "2001-04-01",
-              "2009-04-01", "2017-04-01", "2021-04-01"))
-)
-
-# Compute jobs added in the first ~100 days
-first_100_days <- presidents %>%
-  rowwise() %>%
+library(infer)
+rev_neg <- ces_revisions %>%
   mutate(
-    start_level = ces %>% filter(date == start) %>% pull(level),
-    end_level   = ces %>% filter(date == end) %>% pull(level),
-    jobs_added  = end_level - start_level
+    year = lubridate::year(date),
+    period = if_else(year <= 2000, "pre_2000", "post_2000"),
+    neg = revision < 0
   ) %>%
-  ungroup()%>%
-  arrange(desc(jobs_added))
-
-first_100_days
+  group_by(period) %>%
+  summarize(
+    negative = sum(neg),
+    total = n(),
+    .groups = "drop"
+  )
+rev_neg
+rev_change <- ces_revisions %>%
+  mutate(
+    year = lubridate::year(date),
+    period = if_else(year <= 2020, "pre_2020", "post_2020"),
+    abs_rev = abs(revision)
+  ) %>%
+  t_test(
+    abs_rev ~ period
+  )
+rev_change
 ```
+
+# 3rd Step
+Statistical Analysis - we will analyze the data using t_test and prop_test.
+
+# Fact Checks
+We will now take a look at a couple of statements by politicians regarding the firing and determine whether or not they are factual. 
+
+### Lori Chavez-DeRemer
+![Lori](images/IMG_0103.jpg){width=80%}
+
+### Howard Lutnick
+![Lutnick](images/IMG_0104.jpg){width=80%}
+
 Last Updated: `r format(Sys.time(), "%A %m %d, %Y at %H:%M%p")`
