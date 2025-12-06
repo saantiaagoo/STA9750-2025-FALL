@@ -58,7 +58,11 @@ get_ces <- function() {
   ces_level
 }
 ces <- get_ces()
-head(ces, 2)
+DT::datatable(
+  ces,
+  options = list(pageLength = 5, scrollX = TRUE),
+  caption = "CES Total Nonfarm Payroll"
+)
 ```
 ```{r}
 #| echo: false
@@ -104,7 +108,11 @@ ces_revisions <- map_dfr(all_years, get_ces_revisions_year) |>
   filter(date <= as.Date("2025-06-01")) |>
   arrange(date)
 
-head(ces_revisions, 2)
+DT::datatable(
+  ces_revisions,
+  options = list(pageLength = 5, scrollX = TRUE),
+  caption = "CES Revisions"
+)
 ```
 # 2nd Step
 Data Exploration - we will now explore the data in various ways.
@@ -204,7 +212,11 @@ pres_results <- pres_terms %>%
   ungroup() %>%
   arrange(desc(jobs_added))
 
-pres_results
+DT::datatable(
+  pres_results,
+  options = list(pageLength = 10, scrollX = TRUE),
+  caption = "Total Jobs Added by U.S. Presidents Based on CES Employment Levels"
+)
 ```
 
 Next we will get more specific and look at the first 100 days of each presidency to view jobs added during that timeframe.
@@ -230,7 +242,11 @@ first_100_days <- presidents %>%
   ungroup()%>%
   arrange(desc(jobs_added))
 
-first_100_days
+DT::datatable(
+  first_100_days,
+  options = list(pageLength = 10, scrollX = TRUE),
+  caption = "Total Jobs Added by U.S. Presidents in their first 100 days"
+)
 ```
 ```{r}
 #| echo: false
@@ -239,8 +255,11 @@ first_100_days
 percent_increase <- ces %>%
   arrange(date) %>%
   summarize(first_level = first(level), last_level  = last(level), pct_change  = (last_level - first_level) / first_level * 100)
-
-percent_increase
+DT::datatable(
+  percent_increase,
+  options = list(pageLength = 10, scrollX = TRUE),
+  caption = "CES Total Nonfarm Payroll"
+)
 ```
 
 After viewing the numbers, we conclude that employment has increased almost 80% since 1979.
@@ -257,6 +276,9 @@ ces_joined <- inner_join(
   by = "date"
 )
 ```
+
+The next visualization shows the volatily of the revisions from year to year.
+
 ```{r}
 #| echo: false
 #| message: false
@@ -283,7 +305,7 @@ ggplot(rev_yearly, aes(x = year, y = avg_revision)) +
     x = "Year", y = "Average Monthly Revision") +
   theme_minimal(base_size = 14)
 ```
-Below are the top 10 months with the highest positive and negative revisions.
+Below we highlight the top 10 months with the highest positive and negative revisions.
 ```{r}
 #| echo: false
 #| message: false
@@ -295,10 +317,20 @@ top10_negative <- ces_revisions %>%
   arrange(revision) %>%   
   slice(1:10)
 
-top10_positive
+DT::datatable(
+  top10_positive,
+  options = list(pageLength = 10, scrollX = TRUE),
+  caption = "Top Positive Changes in CES levels"
+)
 
-top10_negative
+DT::datatable(
+  top10_negative,
+  options = list(pageLength = 10, scrollX = TRUE),
+  caption = "Top Negative Changes in CES levels"
+)
 ```
+
+The next visualization shows the volatility of the revisions as a percentage of CES total nonfarm payroll.
 ```{r}
 #| echo: false
 #| message: false
@@ -325,6 +357,13 @@ ggplot(rev_pct_yearly, aes(x = year, y = avg_pct)) +
     y = "Average Monthly Revision (%)"
   ) +
   theme_minimal(base_size = 14)
+```
+
+Next we will show the top 10 positive and negative % changes in revisions based on employment levels.
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
 top_pos <- ces_joined %>%
   arrange(desc(pct_revision)) %>%
   slice(1:10)
@@ -333,10 +372,19 @@ top_neg <- ces_joined %>%
   arrange(pct_revision) %>%
   slice(1:10) 
 
-top_pos
+DT::datatable(
+  top_pos,
+  options = list(pageLength = 10, scrollX = TRUE),
+  caption = "Top positive % CES Revisions based on CES levels"
+)
 
-top_neg
+DT::datatable(
+  top_neg,
+  options = list(pageLength = 10, scrollX = TRUE),
+  caption = "Top negative % CES Revisions based on CES levels"
+)
 ```
+
 ```{r}
 #| echo: false
 #| message: false
@@ -476,38 +524,56 @@ ggplot(rev_yearly, aes(x = year, y = avg_revision, color = category, group = 1))
   theme_minimal(base_size = 14)
 ```
 
+# 3rd Step
+Statistical Analysis - we will analyze the data using t_test and prop_test.
+
 ```{r}
 #| echo: false
 #| message: false
 #| warning: false
 library(infer)
-rev_neg <- ces_revisions %>%
-  mutate(
-    year = lubridate::year(date),
-    period = if_else(year <= 2000, "pre_2000", "post_2000"),
-    neg = revision < 0
-  ) %>%
-  group_by(period) %>%
-  summarize(
-    negative = sum(neg),
-    total = n(),
-    .groups = "drop"
-  )
-rev_neg
 rev_change <- ces_revisions %>%
   mutate(
-    year = lubridate::year(date),
+    year   = year(date),
     period = if_else(year <= 2020, "pre_2020", "post_2020"),
     abs_rev = abs(revision)
   ) %>%
+  # infer::t_test with a formula interface
   t_test(
-    abs_rev ~ period
+    abs_rev ~ period,
+    order = c("post_2020", "pre_2020"),   # post - pre
+    alternative = "two_sided"
   )
-rev_change
+
+rev_change   # will print into your HTML
 ```
 
-# 3rd Step
-Statistical Analysis - we will analyze the data using t_test and prop_test.
+Revisions have become larger after 2020, but this increase is not statistically significant at the 5% level.
+There is weak evidence (significant at 10%) that revisions grew after 2020, but the confidence interval includes the possibility of no change.
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+
+rev_neg_data <- ces_revisions %>%
+  mutate(
+    year   = year(date),
+    period = if_else(year <= 2000, "pre_2000", "post_2000"),
+    neg_cat = if_else(revision < 0, "negative", "non_negative")
+  )
+
+rev_neg_test <- rev_neg_data %>%
+  prop_test(
+    neg_cat ~ period,
+    success = "negative",          # category name (string), not TRUE/FALSE
+    alternative = "two_sided"
+  )
+
+rev_neg_test  # will also print into your HTML
+```
+
+There is no evidence that the proportion of negative revisions changed after 2000.
+The fraction of downward revisions before 2000 is statistically indistinguishable from the fraction after 2000.
 
 # Fact Checks
 We will now take a look at a couple of statements by politicians regarding the firing and determine whether or not they are factual. 
@@ -515,7 +581,73 @@ We will now take a look at a couple of statements by politicians regarding the f
 ### Lori Chavez-DeRemer
 ![Lori](images/IMG_0103.jpg){width=80%}
 
-### Howard Lutnick
-![Lutnick](images/IMG_0104.jpg){width=80%}
+Claim is highlighting that the major revisions given this year are inaccurate.
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+revisions_2024_2025 <- ces_revisions %>%
+  filter(
+    date >= as.Date("2024-02-01"),
+    date <= as.Date("2025-06-01")
+  ) %>%
+  arrange(date)
+
+revisions_2024_2025
+```
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+ces_2025 <- ces %>%
+  filter(lubridate::year(date) == 2025) %>%
+  arrange(date)
+
+ces_2025
+```
+
+**Political Fact-o-Meter** - False
+
+### Roger Marshall
+
+Claim is highlighting that Dr.Erika was purposely inflating job numbers in order to show high negative revisions.
+
+Based on the table below, this is worst 6 month period in regards to accuracy that did not involve a month taking place during the 2008 financial crisis nor COVID-19.
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+library (slider)
+rev_ordered <- ces_revisions %>%
+  arrange(date)
+
+# Compute rolling 6-month sums
+rev_windows <- rev_ordered %>%
+  mutate(
+    window_sum = slide_dbl(
+      revision,
+      sum,
+      .before = 5,         # include current month + previous 5
+      .complete = TRUE     # skip windows with fewer than 6 months
+    )
+  ) %>%
+  mutate(
+    window_start = lag(date, 5),
+    window_end   = date
+  ) %>%
+  filter(!is.na(window_sum))
+
+# Top 10 worst (most negative) windows
+worst_15_windows <- rev_windows %>%
+  arrange(window_sum) %>%
+  slice(1:15) %>%
+  select(window_start, window_end, window_sum)
+
+worst_15_windows
+```
+
+**Political Fact-o-Meter** - False
 
 Last Updated: `r format(Sys.time(), "%A %m %d, %Y at %H:%M%p")`
