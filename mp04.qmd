@@ -384,7 +384,7 @@ DT::datatable(
   caption = "Top negative % CES Revisions based on CES levels"
 )
 ```
-
+The next visualization highlights the best and worst year in regards to most positive amount of revisions and most negative amount of revisions.
 ```{r}
 #| echo: false
 #| message: false
@@ -408,10 +408,8 @@ rev_monthly <- ces_revisions %>%
   )
 
 ggplot(rev_monthly, aes(x = month_label, y = revision, group = year)) +
-  # all years in light gray
   geom_line(color = "grey75", alpha = 0.5) +
   
-  # highlight 2008 (most negative) in red
   geom_line(
     data = dplyr::filter(rev_monthly, year == 2008),
     aes(x = month_label, y = revision, group = year),
@@ -419,7 +417,6 @@ ggplot(rev_monthly, aes(x = month_label, y = revision, group = year)) +
     linewidth = 1.2
   ) +
   
-  # highlight 2021 (most positive) in blue
   geom_line(
     data = dplyr::filter(rev_monthly, year == 2021),
     aes(x = month_label, y = revision, group = year),
@@ -429,12 +426,19 @@ ggplot(rev_monthly, aes(x = month_label, y = revision, group = year)) +
   
   labs(
     title = "Monthly CES Revisions by Year",
-    subtitle = "Red = 2008 (most negative year), Blue = 2021 (most positive year)",
+    subtitle = "Red = 2008 (most negative), Blue = 2021 (most positive)",
     x = "Month",
     y = "Revision (thousands of jobs)"
   ) +
   theme_minimal(base_size = 14)
+```
+The following tables breakdown the most positive and negative years in terms of revisions.
 
+The last table shows how positive each decade was in terms of revisions.
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
 rev_positive_pct <- ces_revisions %>%
    mutate(
     year = year(date),
@@ -466,8 +470,8 @@ neg_years
 rev_decade <- ces_joined %>%
   mutate(
     year = year(date),
-    decade = paste0(floor(year / 10) * 10, "s"),   # ex: 1980s, 1990s
-    positive = revision > 0                        # TRUE/FALSE
+    decade = paste0(floor(year / 10) * 10, "s"),   
+    positive = revision > 0                        
   ) %>%
   group_by(decade) %>%
   summarize(
@@ -480,6 +484,7 @@ rev_decade <- ces_joined %>%
 
 rev_decade
 ```
+The last visualization highlights the average revision on an election year vs the average revision on the first year of new presidential term.
 ```{r}
 #| echo: false
 #| message: false
@@ -503,11 +508,9 @@ rev_yearly <- rev_yearly %>%
     )
   )
 
-# --- Plot ---
 ggplot(rev_yearly, aes(x = year, y = avg_revision, color = category, group = 1)) +
   geom_line(color = "gray60") +
   
-  # Points by category
    geom_point(data = subset(rev_yearly, category == "Highlighted Years"),
              color = "blue", size = 4) +
   geom_point(data = subset(rev_yearly, category == "Following Years"),
@@ -538,14 +541,14 @@ rev_change <- ces_revisions %>%
     period = if_else(year <= 2020, "pre_2020", "post_2020"),
     abs_rev = abs(revision)
   ) %>%
-  # infer::t_test with a formula interface
+  
   t_test(
     abs_rev ~ period,
-    order = c("post_2020", "pre_2020"),   # post - pre
+    order = c("post_2020", "pre_2020"),  
     alternative = "two_sided"
   )
 
-rev_change   # will print into your HTML
+rev_change   
 ```
 
 Revisions have become larger after 2020, but this increase is not statistically significant at the 5% level.
@@ -565,11 +568,11 @@ rev_neg_data <- ces_revisions %>%
 rev_neg_test <- rev_neg_data %>%
   prop_test(
     neg_cat ~ period,
-    success = "negative",          # category name (string), not TRUE/FALSE
+    success = "negative",          
     alternative = "two_sided"
   )
 
-rev_neg_test  # will also print into your HTML
+rev_neg_test  
 ```
 
 There is no evidence that the proportion of negative revisions changed after 2000.
@@ -578,39 +581,8 @@ The fraction of downward revisions before 2000 is statistically indistinguishabl
 # Fact Checks
 We will now take a look at a couple of statements by politicians regarding the firing and determine whether or not they are factual. 
 
-### Lori Chavez-DeRemer
-![Lori](images/IMG_0103.jpg){width=80%}
-
-Claim is highlighting that the major revisions given this year are inaccurate.
-
-```{r}
-#| echo: false
-#| message: false
-#| warning: false
-revisions_2024_2025 <- ces_revisions %>%
-  filter(
-    date >= as.Date("2024-02-01"),
-    date <= as.Date("2025-06-01")
-  ) %>%
-  arrange(date)
-
-revisions_2024_2025
-```
-
-```{r}
-#| echo: false
-#| message: false
-#| warning: false
-ces_2025 <- ces %>%
-  filter(lubridate::year(date) == 2025) %>%
-  arrange(date)
-
-ces_2025
-```
-
-**Political Fact-o-Meter** - False
-
 ### Roger Marshall
+![Roger](images/Roger.png){width=80%}
 
 Claim is highlighting that Dr.Erika was purposely inflating job numbers in order to show high negative revisions.
 
@@ -623,7 +595,6 @@ library (slider)
 rev_ordered <- ces_revisions %>%
   arrange(date)
 
-# Compute rolling 6-month sums
 rev_windows <- rev_ordered %>%
   mutate(
     window_sum = slide_dbl(
@@ -646,7 +617,177 @@ worst_20_windows <- rev_windows %>%
 
 worst_20_windows
 ```
+Next, the two visuals above show that in the year 2008 and 2020, both the employment levels were lowering while the CES revisions were also in the negative. 
 
-**Political Fact-o-Meter** - False
+2025 marks the first year were the revisions are constantly in the negative, but employment levels were mostly rising.
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+ces_2025 <- ces %>%
+  filter(date >= as.Date("2024-12-01"),
+         date <= as.Date("2025-12-01")) %>%
+  arrange(date) %>%
+  mutate(
+    month = format(date, "%Y-%m"),
+    CES_level_change = level - lag(level)  
+  ) %>%
+  filter(year(date) == 2025) %>%
+  select(date, month, level, CES_level_change)
+
+DT::datatable(
+  ces_2025,
+  options = list(pageLength = 10, scrollX = TRUE),
+  caption = "CES Total Nonfarm Payroll for 2025"
+)
+```
+However, the quote states that Dr. Marshall had been complaining for the past year for inflated numbers.
+
+We see below the absolute revision as % of the employment level for this time frame.
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+revisions_2024_2025 <- ces_revisions %>%
+  filter(
+    date >= as.Date("2024-07-01"),
+    date <= as.Date("2025-06-01")
+  ) %>%
+  arrange(date)
+
+rev_pct_2024_2025 <- revisions_2024_2025 %>%
+  left_join(ces, by = "date") %>%  
+  mutate(
+    abs_pct_revision = abs(revision) / level * 100
+  )
+DT::datatable(
+  rev_pct_2024_2025,
+  options = list(pageLength = 10, scrollX = TRUE),
+  caption = "Revisions from July 2024 to June 2025"
+)
+```
+Based on the above and the T-test conducted earlier, even though revisions have become larger after 2020, this increase is not statistically significant.
+
+**Political Fact-o-Meter** - Mostly False
+
+### Fake Claim
+### "The economy is booming, jobs!jobs!jobs!" - June 2025
+
+Claim is highlighting that the economy is strong despite recent negative revisions.
+
+The first visualization shows that the total number of jobs is steadily increasing, despite the third visualization showing that 2025 has had on average a negative revision for the entire year. One can suggest that it is an overstimation of how many jobs are created, that jobs are still increasing.
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+ces_changes <- ces %>%
+  arrange(date) %>%
+  mutate(
+    change = level - lag(level)
+  )
+
+ces_decreases <- ces_changes %>%
+  filter(change < 0)
+
+last_negative_before_june_2025 <- ces_decreases %>%
+  filter(date < as.Date("2025-06-01")) %>%
+  slice_tail(n = 1)
+
+last_negative_before_june_2025
+```
+Based on the table above, December 2020 is the last month that job levels had decrease.
+
+That is until June 2025.
+
+The table below is going to show the lowest increase in job levels during a 6-month period.
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+ces_levels <- ces %>% arrange(date)
+
+level_windows <- ces_levels %>%
+  mutate(
+    six_month_change = level - lag(level, 5),
+    window_start = lag(date, 5),
+    window_end   = date
+  ) %>%
+  filter(!is.na(six_month_change))
+
+positive_windows <- level_windows %>%
+  filter(six_month_change > 0)
+
+lowest_positive_windows <- positive_windows %>%
+  arrange(six_month_change) %>%
+  slice(1:50) %>%
+  select(window_start, window_end, six_month_change)
+
+DT::datatable(
+  lowest_positive_windows,
+  options = list(pageLength = 10, scrollX = TRUE),
+  caption = "Worst 6-month window of jobs increases"
+)
+```
+Jan to Jun 2025 turns to be in the top 35.
+
+In comparison to the best windows of job levels increase below, this 6-month window is not close.
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+ces_ordered <- ces %>%
+  arrange(date)
+
+ces_changes <- ces_ordered %>%
+  mutate(
+    level_change = level - lag(level)
+  )
+
+ces_windows <- ces_changes %>%
+  mutate(
+    window_sum = slide_dbl(
+      level_change,
+      sum,
+      .before = 5,      
+      .complete = TRUE
+    ),
+    window_start = lag(date, 5),  
+    window_end   = date           
+  ) %>%
+  filter(!is.na(window_sum))
+
+best_50_windows <- ces_windows %>%
+  arrange(desc(window_sum)) %>%
+  slice(1:50) %>%
+  select(window_start, window_end, window_sum)
+
+DT::datatable(
+  best_50_windows,
+  options = list(pageLength = 10, scrollX = TRUE),
+  caption = "Best 6-month window of jobs increases"
+)
+```
+Lastly, we will conduct a t-test to determine whether the average job growth from Jan–Jun 2025 is significantly different from zero.
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+ces_2025 <- ces %>%
+  filter(date >= as.Date("2025-01-01"), date <= as.Date("2025-06-01")) %>%
+  arrange(date) %>%
+  mutate(change = level - lag(level)) %>%
+  filter(!is.na(change))
+
+t_test_2025_change <- t.test(ces_2025$change, mu = 0, alternative = "greater")
+
+t_test_2025_change
+```
+
+At the 5% level, there is statistically significant evidence of positive job growth. Though, since the mean growth value is extremely small, the result may be statistically significant but not economically meaningful.
+
+**Political Fact-o-Meter** - Half True
 
 Last Updated: `r format(Sys.time(), "%A %m %d, %Y at %H:%M%p")`
