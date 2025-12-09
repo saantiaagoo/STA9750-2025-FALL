@@ -1,0 +1,582 @@
+---
+title: "Final Project Dataset"
+format: html
+---
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+# ---- Setup download directory ----
+library(readxl)
+library(dplyr)
+library(janitor)
+
+data_dir <- "data/property_sales_raw"
+dir.create(data_dir, recursive = TRUE, showWarnings = FALSE)
+
+base_url <- "https://www.nyc.gov/assets/finance/downloads/pdf/rolling_sales/annualized-sales"
+
+years    <- 2013:2023
+boroughs <- c("bronx", "brooklyn", "manhattan", "queens", "statenisland")
+
+# Helper to try one URL and return success TRUE/FALSE
+safe_download <- function(url, dest) {
+  status <- tryCatch(
+    download.file(url, destfile = dest, mode = "wb", quiet = TRUE),
+    error = function(e) 1L
+  )
+  is.numeric(status) && status == 0L
+}
+
+# ---- Function to download one file ----
+download_one_file <- function(year, borough) {
+  # pick correct borough slug for the filename
+  borough_slug <- borough
+  if (borough == "statenisland" && year >= 2020) {
+    borough_slug <- "staten_island"   # 2020+ files use underscore
+  }
+
+  # older years = .xls, newer years = .xlsx
+  if (year <= 2017) {
+    exts <- c("xls", "xlsx")
+  } else {
+    exts <- c("xlsx", "xls")
+  }
+
+  for (ext in exts) {
+    url  <- sprintf("%s/%d/%d_%s.%s", base_url, year, year, borough_slug, ext)
+    dest <- file.path(data_dir, sprintf("%d_%s.%s", year, borough_slug, ext))
+
+    message("Trying: ", url)
+
+    if (safe_download(url, dest)) {
+      message("  ✓ downloaded: ", dest)
+      return(dest)
+    } else {
+      message("  ✗ failed for: ", url)
+    }
+  }
+
+  warning("Could not download file for ", year, " / ", borough)
+  NA_character_
+}
+
+
+# ---- Download ALL 2013–2023 files ----
+files <- unlist(
+  lapply(years, function(y) {
+    sapply(boroughs, download_one_file, year = y, simplify = TRUE)
+  })
+)
+
+# keep only successful downloads
+files <- files[!is.na(files)]
+
+# Quick check: which years did we actually download?
+download_years <- table(substr(basename(files), 1, 4))
+print(download_years)
+
+# ---- Read and combine ----
+# ---- Read and combine (using BOROUGH row as header) ----
+library(readxl)
+library(dplyr)
+library(janitor)
+
+sales_list <- lapply(files, function(f) {
+
+  # read everything as text, no column names yet
+  raw <- read_excel(
+    path      = f,
+    col_names = FALSE,
+    col_types = "text"
+  )
+
+  # find the row that contains the real header ("BOROUGH ...")
+  header_row <- which(raw[[1]] == "BOROUGH")
+  if (length(header_row) == 0L) {
+    header_row <- which(grepl("BOROUGH", raw[[1]]))[1]
+  }
+  if (is.na(header_row)) {
+    stop("Could not find header row in file: ", f)
+  }
+
+  # use that row as column names, data starts on the next row
+  header <- as.character(unlist(raw[header_row, ]))
+  df <- raw[(header_row + 1):nrow(raw), ]
+  names(df) <- header
+
+  # drop completely empty rows/cols
+  df <- df %>%
+    remove_empty("rows") %>%
+    remove_empty("cols")
+
+  # add year from file name (e.g. "2019_bronx.xlsx")
+  name <- basename(f)
+  year <- as.numeric(substr(name, 1, 4))
+  df$year <- year
+
+  df
+})
+
+sales_2013_2023 <- bind_rows(sales_list)
+
+```
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+library(dplyr)
+library(janitor)
+
+# ---- Split into 3 format groups ----
+sales_raw_2013_2017 <- sales_2013_2023 %>%
+  filter(year >= 2013, year <= 2017)
+
+sales_raw_2018_2019 <- sales_2013_2023 %>%
+  filter(year >= 2018, year <= 2019)
+
+sales_raw_2020_2023 <- sales_2013_2023 %>%
+  filter(year >= 2020, year <= 2023)
+
+# ---- Quick checks ----
+message("Check years in each split:")
+print(table(sales_raw_2013_2017$year))
+print(table(sales_raw_2018_2019$year))
+print(table(sales_raw_2020_2023$year))
+
+message("Row counts:")
+nrow(sales_raw_2013_2017)
+nrow(sales_raw_2018_2019)
+nrow(sales_raw_2020_2023)
+
+message("Column counts (should be similar within each group):")
+ncol(sales_raw_2013_2017)
+ncol(sales_raw_2018_2019)
+ncol(sales_raw_2020_2023)
+
+```
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+clean_2013_2017 <- function(df) {
+  df %>%
+    clean_names() %>%
+    filter(borough %in% c("1","2","3","4","5")) %>%
+    mutate(
+      borough = case_when(
+        borough == "1" ~ "Manhattan",
+        borough == "2" ~ "Bronx",
+        borough == "3" ~ "Brooklyn",
+        borough == "4" ~ "Queens",
+        borough == "5" ~ "Staten Island"
+      ),
+      sale_price = suppressWarnings(as.numeric(gsub("[^0-9]", "", sale_price))),
+      sale_date  = suppressWarnings(as.Date(as.numeric(sale_date), origin = "1899-12-30"))
+    ) %>%
+    filter(!is.na(sale_price), sale_price > 10000) %>%
+    select(year, borough, neighborhood, address, zip_code, sale_price, sale_date) %>%
+    arrange(year, borough, sale_date)
+}
+
+sales_clean_2013_2017 <- clean_2013_2017(sales_raw_2013_2017)
+
+# ---- Quick checks ----
+message("2013-2017 cleaned:")
+summary(sales_clean_2013_2017$sale_price)
+range(sales_clean_2013_2017$sale_date, na.rm = TRUE)
+head(sales_clean_2013_2017)
+
+```
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+library(dplyr)
+library(janitor)
+library(stringr)
+library(lubridate)
+
+clean_2018_2019 <- function(df) {
+
+  df %>%
+    clean_names() %>%
+    
+    # Merge duplicate columns
+    mutate(
+      borough_code_raw = coalesce(borough, borough_2, borough_3),
+      neighborhood_raw = coalesce(neighborhood, neighborhood_2, neighborhood_3),
+      address_raw      = coalesce(address, address_2, address_3),
+      zip_code_raw     = coalesce(zip_code, zip_code_2, zip_code_3),
+      sale_price_raw   = coalesce(sale_price, sale_price_2, sale_price_3),
+      sale_date_raw    = coalesce(sale_date, sale_date_2, sale_date_3)
+    ) %>%
+    
+    # Borough code -> name
+    mutate(
+      borough_code_raw = trimws(borough_code_raw),
+      borough = case_when(
+        borough_code_raw == "1" ~ "Manhattan",
+        borough_code_raw == "2" ~ "Bronx",
+        borough_code_raw == "3" ~ "Brooklyn",
+        borough_code_raw == "4" ~ "Queens",
+        borough_code_raw == "5" ~ "Staten Island",
+        TRUE ~ NA_character_
+      )
+    ) %>%
+    filter(!is.na(borough)) %>%
+    
+    # Clean price
+    mutate(
+      sale_price = suppressWarnings(as.numeric(gsub("[^0-9]", "", sale_price_raw)))
+    ) %>%
+    
+    # ---- Robust date parsing ----
+    mutate(
+      # Try numeric Excel serial first
+      sale_date_num = suppressWarnings(as.numeric(sale_date_raw)),
+      date_from_num = suppressWarnings(as.Date(sale_date_num, origin = "1899-12-30")),
+
+      # Try character dates (mdy, ymd)
+      date_from_char = suppressWarnings(parse_date_time(sale_date_raw, orders = c("mdy", "ymd"))),
+
+      # Final date = numeric first, otherwise character-parsed
+      sale_date = coalesce(date_from_num, date_from_char)
+    ) %>%
+    
+    filter(!is.na(sale_price), sale_price > 10000, !is.na(sale_date)) %>%
+    
+    transmute(
+      year,
+      borough,
+      neighborhood = neighborhood_raw,
+      address      = address_raw,
+      zip_code     = zip_code_raw,
+      sale_price,
+      sale_date
+    ) %>%
+    arrange(year, borough, sale_date)
+}
+
+```
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+library(dplyr)
+library(janitor)
+library(stringr)
+library(lubridate)
+
+clean_2020_2023 <- function(df) {
+
+  df %>%
+    clean_names() %>%
+
+    # 1) Merge the duplicate columns (_2, _3) into one main set
+    mutate(
+      borough_code_raw = coalesce(borough, borough_2, borough_3),
+      neighborhood_raw = coalesce(neighborhood, neighborhood_2, neighborhood_3),
+      address_raw      = coalesce(address, address_2, address_3),
+      zip_code_raw     = coalesce(zip_code, zip_code_2, zip_code_3),
+      sale_price_raw   = coalesce(sale_price, sale_price_2, sale_price_3),
+      sale_date_raw    = coalesce(sale_date, sale_date_2, sale_date_3)
+    ) %>%
+
+    # 2) Borough code -> borough name
+    mutate(
+      borough_code_raw = trimws(borough_code_raw),
+      borough = case_when(
+        borough_code_raw == "1" ~ "Manhattan",
+        borough_code_raw == "2" ~ "Bronx",
+        borough_code_raw == "3" ~ "Brooklyn",
+        borough_code_raw == "4" ~ "Queens",
+        borough_code_raw == "5" ~ "Staten Island",
+        TRUE ~ NA_character_
+      )
+    ) %>%
+    filter(!is.na(borough)) %>%
+
+    # 3) Clean sale price
+    mutate(
+      sale_price = suppressWarnings(
+        as.numeric(gsub("[^0-9]", "", sale_price_raw))
+      )
+    ) %>%
+
+    # 4) Robust date parsing (Excel numbers + various text formats)
+    mutate(
+      sale_date_num  = suppressWarnings(as.numeric(sale_date_raw)),
+      date_from_num  = suppressWarnings(as.Date(sale_date_num, origin = "1899-12-30")),
+      date_from_char = suppressWarnings(
+        parse_date_time(sale_date_raw, orders = c("ymd", "mdy", "dmy"))
+      ),
+      sale_date      = coalesce(date_from_num, date_from_char)
+    ) %>%
+
+    # 5) Keep only reasonable, non-missing sales
+    filter(
+      !is.na(sale_price),
+      sale_price > 10000,
+      !is.na(sale_date)
+    ) %>%
+
+    # 6) Final columns in same format as other years
+    transmute(
+      year,
+      borough,
+      neighborhood = neighborhood_raw,
+      address      = address_raw,
+      zip_code     = zip_code_raw,
+      sale_price,
+      sale_date    = as.Date(sale_date)
+    ) %>%
+    arrange(year, borough, sale_date)
+}
+
+```
+
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+# Create cleaned tables for each period
+sales_clean_2013_2017 <- clean_2013_2017(sales_raw_2013_2017)
+sales_clean_2018_2019 <- clean_2018_2019(sales_raw_2018_2019)
+sales_clean_2020_2023 <- clean_2020_2023(sales_raw_2020_2023)
+```
+
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+library(dplyr)
+
+# Make sure sale_date is Date in every piece
+sales_clean_2013_2017 <- sales_clean_2013_2017 %>%
+  mutate(sale_date = as.Date(sale_date))
+
+sales_clean_2018_2019 <- sales_clean_2018_2019 %>%
+  mutate(sale_date = as.Date(sale_date))
+
+sales_clean_2020_2023 <- sales_clean_2020_2023 %>%
+  mutate(sale_date = as.Date(sale_date))
+
+# ---- Combine all years 2013–2023 ----
+sales_clean_2013_2023 <- bind_rows(
+  sales_clean_2013_2017,
+  sales_clean_2018_2019,
+  sales_clean_2020_2023
+) %>%
+  arrange(year, borough, sale_date)
+
+# ---- Final quick checks ----
+message("Combined 2013–2023:")
+print(table(sales_clean_2013_2023$year))
+
+range(sales_clean_2013_2023$sale_date, na.rm = TRUE)
+summary(sales_clean_2013_2023$sale_price)
+
+head(sales_clean_2013_2023)
+tail(sales_clean_2013_2023)
+```
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+if(!dir.exists(file.path("data", "finalproject"))){
+  dir.create(file.path("data", "finalproject"), showWarnings=FALSE, recursive=TRUE)
+}
+
+library <- function(pkg){
+  ## Mask base::library() to automatically install packages if needed
+  ## Masking is important here so downlit picks up packages and links
+  ## to documentation
+  pkg <- as.character(substitute(pkg))
+  options(repos = c(CRAN = "https://cloud.r-project.org"))
+  if(!require(pkg, character.only=TRUE, quietly=TRUE)) install.packages(pkg)
+  stopifnot(require(pkg, character.only=TRUE, quietly=TRUE))
+}
+
+library(tidyverse)
+library(glue)
+library(readxl)
+library(tidycensus)
+
+get_acs_all_years <- function(variable, geography="zcta",
+                              start_year=2013, end_year=2023){
+  fname <- glue("{variable}_{geography}_{start_year}_{end_year}.csv")
+  fname <- file.path("data", "finalproject", fname)
+  
+  if(!file.exists(fname)){
+    YEARS <- seq(start_year, end_year)
+    YEARS <- YEARS[YEARS != 2020] # Drop 2020 - No survey (covid)
+    
+    ALL_DATA <- map(YEARS, function(yy){
+      tidycensus::get_acs(geography, variable, year=yy, survey="acs5") |>
+        mutate(year=yy) |>
+        select(-moe, -variable) |>
+        rename(!!variable := estimate)
+    }) |> bind_rows()
+    
+    write_csv(ALL_DATA, fname)
+  }
+  
+  read_csv(fname, show_col_types=FALSE)
+}
+
+NYC_ZCTAS <- c(
+  # Bronx (005)
+  "10451", "10452", "10453", "10454", "10455", "10456", "10457", "10458", 
+  "10459", "10460", "10461", "10462", "10463", "10464", "10465", "10466", 
+  "10467", "10468", "10469", "10470", "10471", "10472", "10473", "10474", 
+  "10475",
+  # Brooklyn (047) - Kings County
+  "11201", "11203", "11204", "11205", "11206", "11207", "11208", "11209", 
+  "11210", "11211", "11212", "11213", "11214", "11215", "11216", "11217", 
+  "11218", "11219", "11220", "11221", "11222", "11223", "11224", "11225", 
+  "11226", "11228", "11229", "11230", "11231", "11232", "11233", "11234", 
+  "11235", "11236", "11237", "11238", "11239",
+  # Manhattan (061) - New York County
+  "10001", "10002", "10003", "10004", "10005", "10006", "10007", "10009", 
+  "10010", "10011", "10012", "10013", "10014", "10016", "10017", "10018", 
+  "10019", "10020", "10021", "10022", "10023", "10024", "10025", "10026", 
+  "10027", "10028", "10029", "10030", "10031", "10032", "10033", "10034", 
+  "10035", "10036", "10037", "10038", "10039", "10040", "10044",
+  # Queens (081)
+  "11101", "11102", "11103", "11104", "11105", "11106", "11354", "11355", 
+  "11356", "11357", "11358", "11360", "11361", "11362", "11363", "11364", 
+  "11365", "11366", "11367", "11368", "11369", "11370", "11371", "11372", 
+  "11373", "11374", "11375", "11377", "11378", "11379", "11385", "11411", 
+  "11412", "11413", "11414", "11415", "11416", "11417", "11418", "11419", 
+  "11420", "11421", "11422", "11423", "11426", "11427", "11428", "11429", 
+  "11432", "11433", "11434", "11435", "11436", "11691", "11692", "11693", 
+  "11694", "11695", "11697",
+  # Staten Island (085) - Richmond County
+  "10301", "10302", "10303", "10304", "10305", "10306", "10307", "10308", 
+  "10309", "10310", "10311", "10312", "10314"
+)
+# Household income (12 month)
+INCOME <- get_acs_all_years("B19013_001") |>
+  rename(household_income = B19013_001)
+INCOME <- INCOME |>
+  filter(GEOID %in% NYC_ZCTAS)
+
+# Monthly rent
+RENT <- get_acs_all_years("B25064_001") |>
+  rename(monthly_rent = B25064_001)
+RENT  <- RENT  |>
+  filter(GEOID %in% NYC_ZCTAS)
+
+# Combine tables
+JOIN_TABLE <- INCOME |>
+  left_join(RENT, by = c("GEOID", "year","NAME" )) |>
+  rename(zipcode = "GEOID") |>
+  select(-NAME)
+
+## optional function to format the column name
+format_titles <- function(df){
+  colnames(df) <- str_replace_all(colnames(df), "_", " ") |> str_to_title()
+  df
+}
+JOIN_TABLE |> 
+  format_titles()
+```
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+library(readr)
+library(dplyr)
+
+clean_permits <- read_csv("data/clean_permits.csv")
+
+# Ensure ZIP codes match ACS format
+clean_permits <- clean_permits |>
+  mutate(zipcode = str_pad(as.character(zipcode), 5, pad = "0"))
+
+JOIN_TABLE <- JOIN_TABLE |>
+  mutate(zipcode = str_pad(as.character(zipcode), 5, pad = "0"))
+
+if (!"start_year" %in% names(clean_permits)) {
+  clean_permits <- clean_permits |>
+    mutate(start_year = lubridate::year(start_date))
+}
+
+# Join ACS income onto filming permits
+permits_income <- clean_permits |>
+  left_join(
+    JOIN_TABLE,
+    by = c("zipcode", "start_year" = "year")
+  ) |>
+  filter(!is.na(household_income))   # Keep only ZIPs with ACS income
+
+permits_zip <- permits_income |>
+  group_by(zipcode, household_income) |>
+  summarise(
+    n_permits = n(),
+    first_year = min(start_year),
+    last_year = max(start_year),
+    n_years = last_year - first_year + 1,
+    permits_per_year = n_permits / n_years,
+    .groups = "drop"
+  )
+
+permits_zip <- permits_zip |>
+  mutate(
+    income_group = cut(
+      household_income,
+      breaks = c(0, 50000, 75000, 100000, 150000, Inf),
+      labels = c("<$50k", "$50–75k", "$75–100k", "$100–150k", "$150k+"),
+      right = FALSE
+    )
+  )
+income_summary <- permits_zip |>
+  group_by(income_group) |>
+  summarise(
+    n_zips = n(),
+    pct_with_any_filming = mean(n_permits > 0),
+    median_permits_per_year = median(permits_per_year),
+    mean_permits_per_year = mean(permits_per_year),
+    .groups = "drop"
+  )
+
+income_summary
+```
+```{r}
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+library(ggplot2)
+library(scales)
+
+ggplot(permits_zip, aes(x = household_income, y = permits_per_year)) +
+  geom_point(alpha = 0.4) +
+  geom_smooth(method = "lm", se = TRUE) +
+  scale_x_continuous(labels = label_dollar()) +
+  labs(
+    x = "Median Household Income (ACS)",
+    y = "Avg. Annual Filming Permits",
+    title = "Filming Intensity vs Neighborhood Income (NYC ZIP Codes)"
+  )
+
+cor_test <- cor.test(
+  permits_zip$household_income,
+  permits_zip$permits_per_year
+)
+
+cor_test
+
+model <- lm(permits_per_year ~ household_income, data = permits_zip)
+summary(model)
+```
