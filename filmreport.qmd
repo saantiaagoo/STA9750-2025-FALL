@@ -1,10 +1,18 @@
 ---
-title: "Final Project Dataset"
+title: "Individual Report"
 format: html
 ---
+# Introduction
+New York City has always been a popular place for the film industry to film. Whether its movies or tv shows, there is good probability you will see filming occurring while navigating the streets of NYC. As a result of all this film activity, our group analyzed whether film production activity acts an early signal for rising real estates values in New York City neighborhoods.
 
+My contribution to this overall reaching question was to look if there is any correlation if certain communities are systematically being left out of filming. In specific, look to what is the relationship between lower-income areas and filming activity. By looking at this specific question, we are able to establish whether filming tends to follow existing economic conditions or whether it has the potential to identify neighborhoods before significant real estate changes occur. If lower-income communities are routinely excluded from filming, then film production may simply mirror current economic inequality and established real estate patterns. In that case, filming would be more reflective of present conditions than predictive of future change.
+
+# Data Acquisition
+
+To begin, we will acquire all our datasets. 
+
+First we will acquire our data for NYC housing annualized sales from the NYC department of finance from the years 2013 to 2023.
 ```{r}
-#| echo: false
 #| message: false
 #| warning: false
 # ---- Setup download directory ----
@@ -28,7 +36,6 @@ safe_download <- function(url, dest) {
   )
   is.numeric(status) && status == 0L
 }
-
 # ---- Function to download one file ----
 download_one_file <- function(year, borough) {
   # pick correct borough slug for the filename
@@ -36,14 +43,12 @@ download_one_file <- function(year, borough) {
   if (borough == "statenisland" && year >= 2020) {
     borough_slug <- "staten_island"   # 2020+ files use underscore
   }
-
   # older years = .xls, newer years = .xlsx
   if (year <= 2017) {
     exts <- c("xls", "xlsx")
   } else {
     exts <- c("xlsx", "xls")
   }
-
   for (ext in exts) {
     url  <- sprintf("%s/%d/%d_%s.%s", base_url, year, year, borough_slug, ext)
     dest <- file.path(data_dir, sprintf("%d_%s.%s", year, borough_slug, ext))
@@ -57,41 +62,28 @@ download_one_file <- function(year, borough) {
       message("  ✗ failed for: ", url)
     }
   }
-
   warning("Could not download file for ", year, " / ", borough)
   NA_character_
 }
-
-
 # ---- Download ALL 2013–2023 files ----
 files <- unlist(
   lapply(years, function(y) {
     sapply(boroughs, download_one_file, year = y, simplify = TRUE)
   })
 )
-
 # keep only successful downloads
 files <- files[!is.na(files)]
-
 # Quick check: which years did we actually download?
 download_years <- table(substr(basename(files), 1, 4))
 print(download_years)
-
-# ---- Read and combine ----
 # ---- Read and combine (using BOROUGH row as header) ----
-library(readxl)
-library(dplyr)
-library(janitor)
-
 sales_list <- lapply(files, function(f) {
-
   # read everything as text, no column names yet
   raw <- read_excel(
     path      = f,
     col_names = FALSE,
     col_types = "text"
   )
-
   # find the row that contains the real header ("BOROUGH ...")
   header_row <- which(raw[[1]] == "BOROUGH")
   if (length(header_row) == 0L) {
@@ -100,36 +92,27 @@ sales_list <- lapply(files, function(f) {
   if (is.na(header_row)) {
     stop("Could not find header row in file: ", f)
   }
-
   # use that row as column names, data starts on the next row
   header <- as.character(unlist(raw[header_row, ]))
   df <- raw[(header_row + 1):nrow(raw), ]
   names(df) <- header
-
   # drop completely empty rows/cols
   df <- df %>%
     remove_empty("rows") %>%
     remove_empty("cols")
-
   # add year from file name (e.g. "2019_bronx.xlsx")
   name <- basename(f)
   year <- as.numeric(substr(name, 1, 4))
   df$year <- year
-
   df
 })
 
 sales_2013_2023 <- bind_rows(sales_list)
-
 ```
-
 ```{r}
 #| echo: false
 #| message: false
 #| warning: false
-library(dplyr)
-library(janitor)
-
 # ---- Split into 3 format groups ----
 sales_raw_2013_2017 <- sales_2013_2023 %>%
   filter(year >= 2013, year <= 2017)
@@ -157,11 +140,12 @@ ncol(sales_raw_2018_2019)
 ncol(sales_raw_2020_2023)
 
 ```
-
+Once the dataset has been downloaded, we will now clean the data
 ```{r}
-#| echo: false
 #| message: false
 #| warning: false
+library(stringr)
+library(lubridate)
 clean_2013_2017 <- function(df) {
   df %>%
     clean_names() %>%
@@ -190,22 +174,10 @@ summary(sales_clean_2013_2017$sale_price)
 range(sales_clean_2013_2017$sale_date, na.rm = TRUE)
 head(sales_clean_2013_2017)
 
-```
-
-```{r}
-#| echo: false
-#| message: false
-#| warning: false
-library(dplyr)
-library(janitor)
-library(stringr)
-library(lubridate)
-
 clean_2018_2019 <- function(df) {
 
   df %>%
     clean_names() %>%
-    
     # Merge duplicate columns
     mutate(
       borough_code_raw = coalesce(borough, borough_2, borough_3),
@@ -215,7 +187,6 @@ clean_2018_2019 <- function(df) {
       sale_price_raw   = coalesce(sale_price, sale_price_2, sale_price_3),
       sale_date_raw    = coalesce(sale_date, sale_date_2, sale_date_3)
     ) %>%
-    
     # Borough code -> name
     mutate(
       borough_code_raw = trimws(borough_code_raw),
@@ -229,27 +200,22 @@ clean_2018_2019 <- function(df) {
       )
     ) %>%
     filter(!is.na(borough)) %>%
-    
     # Clean price
     mutate(
       sale_price = suppressWarnings(as.numeric(gsub("[^0-9]", "", sale_price_raw)))
     ) %>%
-    
     # ---- Robust date parsing ----
     mutate(
       # Try numeric Excel serial first
       sale_date_num = suppressWarnings(as.numeric(sale_date_raw)),
       date_from_num = suppressWarnings(as.Date(sale_date_num, origin = "1899-12-30")),
-
       # Try character dates (mdy, ymd)
       date_from_char = suppressWarnings(parse_date_time(sale_date_raw, orders = c("mdy", "ymd"))),
-
       # Final date = numeric first, otherwise character-parsed
       sale_date = coalesce(date_from_num, date_from_char)
     ) %>%
     
     filter(!is.na(sale_price), sale_price > 10000, !is.na(sale_date)) %>%
-    
     transmute(
       year,
       borough,
@@ -262,22 +228,9 @@ clean_2018_2019 <- function(df) {
     arrange(year, borough, sale_date)
 }
 
-```
-
-```{r}
-#| echo: false
-#| message: false
-#| warning: false
-library(dplyr)
-library(janitor)
-library(stringr)
-library(lubridate)
-
 clean_2020_2023 <- function(df) {
-
   df %>%
     clean_names() %>%
-
     # 1) Merge the duplicate columns (_2, _3) into one main set
     mutate(
       borough_code_raw = coalesce(borough, borough_2, borough_3),
@@ -287,7 +240,6 @@ clean_2020_2023 <- function(df) {
       sale_price_raw   = coalesce(sale_price, sale_price_2, sale_price_3),
       sale_date_raw    = coalesce(sale_date, sale_date_2, sale_date_3)
     ) %>%
-
     # 2) Borough code -> borough name
     mutate(
       borough_code_raw = trimws(borough_code_raw),
@@ -301,14 +253,12 @@ clean_2020_2023 <- function(df) {
       )
     ) %>%
     filter(!is.na(borough)) %>%
-
     # 3) Clean sale price
     mutate(
       sale_price = suppressWarnings(
         as.numeric(gsub("[^0-9]", "", sale_price_raw))
       )
     ) %>%
-
     # 4) Robust date parsing (Excel numbers + various text formats)
     mutate(
       sale_date_num  = suppressWarnings(as.numeric(sale_date_raw)),
@@ -318,14 +268,12 @@ clean_2020_2023 <- function(df) {
       ),
       sale_date      = coalesce(date_from_num, date_from_char)
     ) %>%
-
     # 5) Keep only reasonable, non-missing sales
     filter(
       !is.na(sale_price),
       sale_price > 10000,
       !is.na(sale_date)
     ) %>%
-
     # 6) Final columns in same format as other years
     transmute(
       year,
@@ -338,34 +286,21 @@ clean_2020_2023 <- function(df) {
     ) %>%
     arrange(year, borough, sale_date)
 }
-
 ```
-
-
+Once cleaned, we will finally check our newly created tables to make sure they are correct.
 ```{r}
-#| echo: false
 #| message: false
 #| warning: false
 # Create cleaned tables for each period
 sales_clean_2013_2017 <- clean_2013_2017(sales_raw_2013_2017)
 sales_clean_2018_2019 <- clean_2018_2019(sales_raw_2018_2019)
 sales_clean_2020_2023 <- clean_2020_2023(sales_raw_2020_2023)
-```
-
-
-```{r}
-#| echo: false
-#| message: false
-#| warning: false
-library(dplyr)
 
 # Make sure sale_date is Date in every piece
 sales_clean_2013_2017 <- sales_clean_2013_2017 %>%
   mutate(sale_date = as.Date(sale_date))
-
 sales_clean_2018_2019 <- sales_clean_2018_2019 %>%
   mutate(sale_date = as.Date(sale_date))
-
 sales_clean_2020_2023 <- sales_clean_2020_2023 %>%
   mutate(sale_date = as.Date(sale_date))
 
@@ -387,15 +322,17 @@ summary(sales_clean_2013_2023$sale_price)
 head(sales_clean_2013_2023)
 tail(sales_clean_2013_2023)
 ```
-
+Next we will acquire our dataset of Yearly Census of Income and Rent from the Bureau of Labor Statistics from the same time range.
 ```{r}
-#| echo: false
 #| message: false
 #| warning: false
+library(tidyverse)
+library(glue)
+library(readxl)
+library(tidycensus)
 if(!dir.exists(file.path("data", "finalproject"))){
   dir.create(file.path("data", "finalproject"), showWarnings=FALSE, recursive=TRUE)
 }
-
 library <- function(pkg){
   ## Mask base::library() to automatically install packages if needed
   ## Masking is important here so downlit picks up packages and links
@@ -405,11 +342,6 @@ library <- function(pkg){
   if(!require(pkg, character.only=TRUE, quietly=TRUE)) install.packages(pkg)
   stopifnot(require(pkg, character.only=TRUE, quietly=TRUE))
 }
-
-library(tidyverse)
-library(glue)
-library(readxl)
-library(tidycensus)
 
 get_acs_all_years <- function(variable, geography="zcta",
                               start_year=2013, end_year=2023){
@@ -490,9 +422,8 @@ format_titles <- function(df){
 JOIN_TABLE |> 
   format_titles()
 ```
-
+Lastly, we will obtain our last data set and combine it with our rent tables.
 ```{r}
-#| echo: false
 #| message: false
 #| warning: false
 library(readr)
@@ -551,6 +482,7 @@ income_summary <- permits_zip |>
   )
 income_summary
 ```
+Now that we have all our datasets, we are able to explore the data.
 ```{r}
 #| echo: false
 #| message: false
