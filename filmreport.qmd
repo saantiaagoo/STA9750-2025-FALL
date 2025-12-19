@@ -3,9 +3,11 @@ title: "Individual Report"
 format: html
 ---
 # Introduction
-New York City has always been a popular place for the film industry to film. Whether its movies or tv shows, there is good probability you will see filming occurring while navigating the streets of NYC. As a result of all this film activity, our group analyzed whether film production activity acts an early signal for rising real estates values in New York City neighborhoods.
+New York City has long been a central hub for the film and television industry. From major motion pictures to episodic television shows, filming has become a routine part of daily life in the city, with production crews frequently occupying streets, sidewalks, and public spaces. Given the scale and visibility of this activity, our group set out to examine whether film production activity can act as an early signal for rising real estate values in New York City neighborhoods.
 
-My contribution to this overall reaching question was to look if there is any correlation if certain communities are systematically being left out of filming. In specific, look to what is the relationship between lower-income areas and filming activity. By looking at this specific question, we are able to establish whether filming tends to follow existing economic conditions or whether it has the potential to identify neighborhoods before significant real estate changes occur. If lower-income communities are routinely excluded from filming, then film production may simply mirror current economic inequality and established real estate patterns. In that case, filming would be more reflective of present conditions than predictive of future change.
+My specific contribution to this broader research question focuses on whether certain communities are systematically left out of filming, particularly lower-income neighborhoods. Examining this relationship is a critical first step in understanding whether film production reflects existing economic conditions or has the potential to identify neighborhoods before significant real estate changes occur. If lower-income communities are routinely excluded from filming, then film production may simply mirror current economic inequality and established real estate patterns. In that case, filming activity would be more reflective of present conditions rather than predictive of future neighborhood change.
+
+To explore this question, I analyzed the relationship between neighborhood median household income and filming activity at the ZIP-code level.
 
 # Data Acquisition
 
@@ -15,6 +17,7 @@ First we will acquire our data for NYC housing annualized sales from the NYC dep
 ```{r}
 #| message: false
 #| warning: false
+#| results: false
 # ---- Setup download directory ----
 library(readxl)
 library(dplyr)
@@ -113,6 +116,7 @@ sales_2013_2023 <- bind_rows(sales_list)
 #| echo: false
 #| message: false
 #| warning: false
+#| results: false
 # ---- Split into 3 format groups ----
 sales_raw_2013_2017 <- sales_2013_2023 %>%
   filter(year >= 2013, year <= 2017)
@@ -144,6 +148,7 @@ Once the dataset has been downloaded, we will now clean the data
 ```{r}
 #| message: false
 #| warning: false
+#| results: false
 library(stringr)
 library(lubridate)
 clean_2013_2017 <- function(df) {
@@ -291,6 +296,7 @@ Once cleaned, we will finally check our newly created tables to make sure they a
 ```{r}
 #| message: false
 #| warning: false
+#| results: false
 # Create cleaned tables for each period
 sales_clean_2013_2017 <- clean_2013_2017(sales_raw_2013_2017)
 sales_clean_2018_2019 <- clean_2018_2019(sales_raw_2018_2019)
@@ -426,6 +432,7 @@ Lastly, we will obtain our last data set and combine it with our rent tables.
 ```{r}
 #| message: false
 #| warning: false
+#| results: false
 library(readr)
 library(dplyr)
 
@@ -482,7 +489,10 @@ income_summary <- permits_zip |>
   )
 income_summary
 ```
+# Data Analysis
 Now that we have all our datasets, we are able to explore the data.
+
+We will first create a visualization to show the relationship between income and film permits throughout New York City.
 ```{r}
 #| echo: false
 #| message: false
@@ -510,9 +520,11 @@ cor_test
 model <- lm(permits_per_year ~ household_income, data = permits_zip)
 summary(model)
 ```
+The results show a positive and statistically meaningful relationship between income and filming. A Pearson correlation of 0.23 (p < 0.001) indicates that higher-income ZIP codes tend to receive more filming permits. A linear regression confirms this pattern: each additional $10,000 in median household income is associated with approximately eight additional filming permits per year (p < 0.001). While income explains a modest share of the overall variation in filming activity (R² = 0.053), the direction and consistency of the relationship suggest that lower-income communities are underrepresented in filming relative to higher-income communities. Although filming occurs across all boroughs and income levels, wealthier neighborhoods tend to experience both more frequent filming and a higher total number of permits over time.
+
+However, analyzing all five boroughs together can obscure important local differences. Each borough has its own infrastructure, land use patterns, and economic composition, which may influence filming decisions. To better understand how the income-filming relationship varies across the city, I separated the analysis by borough and recreated the same visualizations and summary statistics for each one.
 
 ```{r}
-#| echo: false
 #| message: false
 #| warning: false
 zip_borough <- tribble(
@@ -607,3 +619,54 @@ p_queens
 p_bronx
 p_statenisland
 ```
+### Manhattan
+In Manhattan, the relationship between income and filming activity is the strongest and most consistent. Higher-income ZIP codes receive substantially more filming permits per year than lower-income ZIP codes, and the scatter plot shows a clear upward trend. While lower-income ZIP codes are not completely excluded from filming, they receive far fewer permits and cluster near the bottom of the distribution. This indicates that filming in Manhattan is heavily concentrated in wealthier areas.
+
+### Brooklyn
+Brooklyn also exhibits a positive relationship between income and filming, though with more variation than Manhattan. Higher-income ZIP codes tend to receive more filming permits, while lower-income ZIP codes more frequently experience little or no filming activity. The upward-sloping trend line suggests that income remains an important factor in filming location decisions, but Brooklyn’s broader income distribution leads to a wider spread of outcomes, including moderate filming activity in some middle-income ZIP codes.
+
+### Queens
+In Queens, the relationship between income and filming is present but weaker. Filming permits are more evenly distributed across ZIP codes, and the trend line is less steep. While higher-income ZIP codes still tend to receive more filming on average, there are more exceptions than in Manhattan or Brooklyn. This suggests that additional factors—such as available space, industrial land use, or proximity to studios—may play a larger role in filming decisions in Queens, even though income continues to matter.
+
+### Bronx
+The Bronx shows lower overall filming activity compared to other boroughs. Most ZIP codes, regardless of income level, receive relatively few filming permits per year. Higher-income ZIP codes in the Bronx do receive slightly more filming than lower-income ZIP codes, but the difference is modest. This suggests that while income plays a role, the borough as a whole is underrepresented in film production.
+
+### Staten Island
+Staten Island experiences the least filming activity overall. Many ZIP codes receive few or no filming permits, and the relationship between income and filming is weak and inconsistent. The small number of ZIP codes and limited filming events make patterns harder to detect, but the data indicate that Staten Island is largely overlooked by the film industry regardless of income level.
+
+Across all five boroughs, higher-income ZIP codes are generally more likely to host filming and to do so more frequently, though the strength of this pattern varies. Manhattan and Brooklyn show the clearest income-based disparities, while Queens displays a weaker relationship and the Bronx and Staten Island experience low filming activity overall. Taken together, these borough-level patterns reinforce the conclusion that lower-income communities are systematically underrepresented in New York City’s filming landscape.
+
+# Conclusion
+Asking whether certain communities are systematically left out of filming—particularly lower-income neighborhoods—helps establish an essential baseline for evaluating whether film production activity can act as an early signal of rising real estate values in New York City. If filming were evenly distributed across neighborhoods regardless of income, film permits would provide little insight into future housing market changes. However, the data show that filming activity is not random. Instead, it is concentrated in higher-income ZIP codes and occurs much less frequently in lower-income areas.
+
+Understanding this uneven distribution is crucial because it helps distinguish cause from correlation. If film production consistently avoids lower-income neighborhoods, then high levels of filming may simply reflect existing wealth rather than predict future growth. In this case, filming activity would follow real estate value increases instead of leading them. Without first identifying which communities are excluded from filming, it would be easy to misinterpret film permits as a predictive signal when they are actually responding to established market conditions.
+
+At the same time, the analysis also shows that filming does occur across all boroughs, even if unevenly. In boroughs such as Queens and Brooklyn, some lower-income ZIP codes still receive moderate filming activity. These cases are especially important for future research. If filming begins to appear in historically underrepresented or lower-income areas and is followed by rising rents or property values, that pattern could suggest that film production is identifying neighborhoods with future growth potential—perhaps due to unique physical characteristics, improving infrastructure, or increasing cultural visibility.
+
+This analysis highlights an important limitation as well: income alone does not fully explain filming activity. Factors such as zoning, industrial land use, neighborhood aesthetics, permitting logistics, and community receptiveness likely play meaningful roles. Future research could strengthen these findings by incorporating land-use data, historical property values, or time-lagged housing outcomes to better assess whether filming precedes or follows real estate change.
+
+Overall, by first examining whether lower-income communities are systematically excluded from filming, this analysis clarifies when and where film permits can plausibly serve as a leading indicator. Film production is most likely to signal future real estate change in neighborhoods where filming expands beyond traditionally high-income areas. Without this foundational understanding, it would be impossible to determine whether film activity is driving neighborhood change or merely reflecting existing economic inequality.
+
+# Limitations
+While this analysis provides valuable insight into the relationship between neighborhood income and filming activity in New York City, several limitations should be acknowledged.
+
+First, the analysis relies on ZIP codes as a proxy for neighborhoods. ZIP codes are designed for mail delivery rather than for capturing social or economic boundaries, and they can contain a mix of income levels, housing types, and land uses. As a result, some within-ZIP variation in income or filming activity may be obscured. Using smaller geographic units, such as census tracts, could provide a more precise picture of how filming relates to neighborhood-level economic conditions.
+
+Second, the analysis focuses primarily on median household income as the key explanatory variable. While income is an important indicator of neighborhood economic status, it does not fully capture other factors that may influence filming decisions. Variables such as zoning regulations, availability of industrial or commercial space, street layout, proximity to studios, and neighborhood infrastructure likely play an important role. Because these factors are not included in the current analysis, the results should not be interpreted as income being the sole driver of filming activity.
+
+Third, the study examines associations rather than causal relationships. Although higher-income ZIP codes tend to receive more filming permits, this analysis cannot determine whether income causes increased filming or whether both are driven by underlying neighborhood characteristics. Similarly, while filming activity may be related to real estate trends, this study does not establish whether filming precedes changes in property values or simply follows them.
+
+Finally, filming permit data captures approved filming events, but it may not fully reflect informal production activity, short-term shoots, or variations in the scale of productions. A large studio production and a small independent shoot are treated equally in the permit data, even though their economic and social impacts may differ substantially.
+
+# Future Research
+Future research could build on this analysis in several meaningful ways. One important extension would be to examine the timing of filming activity relative to changes in real estate values. By incorporating time-lagged housing data—such as rent growth, sale prices, or building permits—researchers could assess whether increases in filming activity tend to occur before, during, or after changes in neighborhood real estate markets. This would help clarify whether filming acts as an early signal of neighborhood change or simply reflects existing trends.
+
+Another promising direction would be to incorporate additional neighborhood characteristics, such as zoning classifications, land use patterns, or commercial density. Including these variables could help disentangle whether filming is driven by economic status, physical space availability, or regulatory factors. In particular, identifying the role of industrial and mixed-use areas could shed light on why some lower-income ZIP codes still attract filming activity.
+
+Future work could also explore borough-specific dynamics in greater depth, including how local permitting practices, infrastructure, or community engagement influence filming decisions. Comparing New York City to other major filming hubs could further contextualize whether the observed patterns are unique to NYC or common across cities with large film industries.
+
+Finally, qualitative research—such as interviews with location scouts, production managers, or community organizations—could complement the quantitative findings. These perspectives could provide insight into how filming locations are chosen and how residents experience the presence or absence of film production in their neighborhoods.
+
+Together, these extensions would deepen our understanding of how film production interacts with urban development and housing markets, and would help determine whether filming activity can serve as a meaningful early indicator of neighborhood change.
+
+Last Updated: `r format(Sys.time(), "%A %m %d, %Y at %H:%M%p")`

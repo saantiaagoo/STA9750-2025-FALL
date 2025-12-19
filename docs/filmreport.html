@@ -154,8 +154,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 <section id="introduction" class="level1">
 <h1>Introduction</h1>
-<p>New York City has always been a popular place for the film industry to film. Whether its movies or tv shows, there is good probability you will see filming occurring while navigating the streets of NYC. As a result of all this film activity, our group analyzed whether film production activity acts an early signal for rising real estates values in New York City neighborhoods.</p>
-<p>My contribution to this overall reaching question was to look if there is any correlation if certain communities are systematically being left out of filming. In specific, look to what is the relationship between lower-income areas and filming activity. By looking at this specific question, we are able to establish whether filming tends to follow existing economic conditions or whether it has the potential to identify neighborhoods before significant real estate changes occur. If lower-income communities are routinely excluded from filming, then film production may simply mirror current economic inequality and established real estate patterns. In that case, filming would be more reflective of present conditions than predictive of future change.</p>
+<p>New York City has long been a central hub for the film and television industry. From major motion pictures to episodic television shows, filming has become a routine part of daily life in the city, with production crews frequently occupying streets, sidewalks, and public spaces. Given the scale and visibility of this activity, our group set out to examine whether film production activity can act as an early signal for rising real estate values in New York City neighborhoods.</p>
+<p>My specific contribution to this broader research question focuses on whether certain communities are systematically left out of filming, particularly lower-income neighborhoods. Examining this relationship is a critical first step in understanding whether film production reflects existing economic conditions or has the potential to identify neighborhoods before significant real estate changes occur. If lower-income communities are routinely excluded from filming, then film production may simply mirror current economic inequality and established real estate patterns. In that case, filming activity would be more reflective of present conditions rather than predictive of future neighborhood change.</p>
+<p>To explore this question, I analyzed the relationship between neighborhood median household income and filming activity at the ZIP-code level.</p>
 </section>
 <section id="data-acquisition" class="level1">
 <h1>Data Acquisition</h1>
@@ -222,404 +223,315 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb1-58"><a href="#cb1-58" aria-hidden="true" tabindex="-1"></a>files <span class="ot">&lt;-</span> files[<span class="sc">!</span><span class="fu">is.na</span>(files)]</span>
 <span id="cb1-59"><a href="#cb1-59" aria-hidden="true" tabindex="-1"></a><span class="co"># Quick check: which years did we actually download?</span></span>
 <span id="cb1-60"><a href="#cb1-60" aria-hidden="true" tabindex="-1"></a>download_years <span class="ot">&lt;-</span> <span class="fu">table</span>(<span class="fu">substr</span>(<span class="fu">basename</span>(files), <span class="dv">1</span>, <span class="dv">4</span>))</span>
-<span id="cb1-61"><a href="#cb1-61" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(download_years)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>
-2013 2014 2015 2016 2017 2018 2019 2020 2021 2022 2023 
-   5    5    5    5    5    5    5    5    5    5    5 </code></pre>
-</div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># ---- Read and combine (using BOROUGH row as header) ----</span></span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>sales_list <span class="ot">&lt;-</span> <span class="fu">lapply</span>(files, <span class="cf">function</span>(f) {</span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  <span class="co"># read everything as text, no column names yet</span></span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  raw <span class="ot">&lt;-</span> <span class="fu">read_excel</span>(</span>
-<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">path      =</span> f,</span>
-<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">col_names =</span> <span class="cn">FALSE</span>,</span>
-<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">col_types =</span> <span class="st">"text"</span></span>
-<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>  <span class="co"># find the row that contains the real header ("BOROUGH ...")</span></span>
-<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>  header_row <span class="ot">&lt;-</span> <span class="fu">which</span>(raw[[<span class="dv">1</span>]] <span class="sc">==</span> <span class="st">"BOROUGH"</span>)</span>
-<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="fu">length</span>(header_row) <span class="sc">==</span> <span class="dv">0</span>L) {</span>
-<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>    header_row <span class="ot">&lt;-</span> <span class="fu">which</span>(<span class="fu">grepl</span>(<span class="st">"BOROUGH"</span>, raw[[<span class="dv">1</span>]]))[<span class="dv">1</span>]</span>
-<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>  }</span>
-<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="fu">is.na</span>(header_row)) {</span>
-<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>    <span class="fu">stop</span>(<span class="st">"Could not find header row in file: "</span>, f)</span>
-<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>  }</span>
-<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>  <span class="co"># use that row as column names, data starts on the next row</span></span>
-<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>  header <span class="ot">&lt;-</span> <span class="fu">as.character</span>(<span class="fu">unlist</span>(raw[header_row, ]))</span>
-<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>  df <span class="ot">&lt;-</span> raw[(header_row <span class="sc">+</span> <span class="dv">1</span>)<span class="sc">:</span><span class="fu">nrow</span>(raw), ]</span>
-<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">names</span>(df) <span class="ot">&lt;-</span> header</span>
-<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>  <span class="co"># drop completely empty rows/cols</span></span>
-<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>  df <span class="ot">&lt;-</span> df <span class="sc">%&gt;%</span></span>
-<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>    <span class="fu">remove_empty</span>(<span class="st">"rows"</span>) <span class="sc">%&gt;%</span></span>
-<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a>    <span class="fu">remove_empty</span>(<span class="st">"cols"</span>)</span>
-<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a>  <span class="co"># add year from file name (e.g. "2019_bronx.xlsx")</span></span>
-<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a>  name <span class="ot">&lt;-</span> <span class="fu">basename</span>(f)</span>
-<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a>  year <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(<span class="fu">substr</span>(name, <span class="dv">1</span>, <span class="dv">4</span>))</span>
-<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a>  df<span class="sc">$</span>year <span class="ot">&lt;-</span> year</span>
-<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a>  df</span>
-<span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a>})</span>
-<span id="cb3-31"><a href="#cb3-31" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-32"><a href="#cb3-32" aria-hidden="true" tabindex="-1"></a>sales_2013_2023 <span class="ot">&lt;-</span> <span class="fu">bind_rows</span>(sales_list)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</div>
-<div class="cell">
-<div class="cell-output cell-output-stdout">
-<pre><code>
- 2013  2014  2015  2016  2017 
-89974 88687 91446 89806 88660 </code></pre>
-</div>
-<div class="cell-output cell-output-stdout">
-<pre><code>
- 2018  2019 
-83782 83920 </code></pre>
-</div>
-<div class="cell-output cell-output-stdout">
-<pre><code>
- 2020  2021  2022  2023 
-68684 99090 93427 76411 </code></pre>
-</div>
-<div class="cell-output cell-output-stdout">
-<pre><code>[1] 448573</code></pre>
-</div>
-<div class="cell-output cell-output-stdout">
-<pre><code>[1] 167702</code></pre>
-</div>
-<div class="cell-output cell-output-stdout">
-<pre><code>[1] 337612</code></pre>
-</div>
-<div class="cell-output cell-output-stdout">
-<pre><code>[1] 64</code></pre>
-</div>
-<div class="cell-output cell-output-stdout">
-<pre><code>[1] 64</code></pre>
-</div>
-<div class="cell-output cell-output-stdout">
-<pre><code>[1] 64</code></pre>
-</div>
+<span id="cb1-61"><a href="#cb1-61" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(download_years)</span>
+<span id="cb1-62"><a href="#cb1-62" aria-hidden="true" tabindex="-1"></a><span class="co"># ---- Read and combine (using BOROUGH row as header) ----</span></span>
+<span id="cb1-63"><a href="#cb1-63" aria-hidden="true" tabindex="-1"></a>sales_list <span class="ot">&lt;-</span> <span class="fu">lapply</span>(files, <span class="cf">function</span>(f) {</span>
+<span id="cb1-64"><a href="#cb1-64" aria-hidden="true" tabindex="-1"></a>  <span class="co"># read everything as text, no column names yet</span></span>
+<span id="cb1-65"><a href="#cb1-65" aria-hidden="true" tabindex="-1"></a>  raw <span class="ot">&lt;-</span> <span class="fu">read_excel</span>(</span>
+<span id="cb1-66"><a href="#cb1-66" aria-hidden="true" tabindex="-1"></a>    <span class="at">path      =</span> f,</span>
+<span id="cb1-67"><a href="#cb1-67" aria-hidden="true" tabindex="-1"></a>    <span class="at">col_names =</span> <span class="cn">FALSE</span>,</span>
+<span id="cb1-68"><a href="#cb1-68" aria-hidden="true" tabindex="-1"></a>    <span class="at">col_types =</span> <span class="st">"text"</span></span>
+<span id="cb1-69"><a href="#cb1-69" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb1-70"><a href="#cb1-70" aria-hidden="true" tabindex="-1"></a>  <span class="co"># find the row that contains the real header ("BOROUGH ...")</span></span>
+<span id="cb1-71"><a href="#cb1-71" aria-hidden="true" tabindex="-1"></a>  header_row <span class="ot">&lt;-</span> <span class="fu">which</span>(raw[[<span class="dv">1</span>]] <span class="sc">==</span> <span class="st">"BOROUGH"</span>)</span>
+<span id="cb1-72"><a href="#cb1-72" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="fu">length</span>(header_row) <span class="sc">==</span> <span class="dv">0</span>L) {</span>
+<span id="cb1-73"><a href="#cb1-73" aria-hidden="true" tabindex="-1"></a>    header_row <span class="ot">&lt;-</span> <span class="fu">which</span>(<span class="fu">grepl</span>(<span class="st">"BOROUGH"</span>, raw[[<span class="dv">1</span>]]))[<span class="dv">1</span>]</span>
+<span id="cb1-74"><a href="#cb1-74" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb1-75"><a href="#cb1-75" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="fu">is.na</span>(header_row)) {</span>
+<span id="cb1-76"><a href="#cb1-76" aria-hidden="true" tabindex="-1"></a>    <span class="fu">stop</span>(<span class="st">"Could not find header row in file: "</span>, f)</span>
+<span id="cb1-77"><a href="#cb1-77" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb1-78"><a href="#cb1-78" aria-hidden="true" tabindex="-1"></a>  <span class="co"># use that row as column names, data starts on the next row</span></span>
+<span id="cb1-79"><a href="#cb1-79" aria-hidden="true" tabindex="-1"></a>  header <span class="ot">&lt;-</span> <span class="fu">as.character</span>(<span class="fu">unlist</span>(raw[header_row, ]))</span>
+<span id="cb1-80"><a href="#cb1-80" aria-hidden="true" tabindex="-1"></a>  df <span class="ot">&lt;-</span> raw[(header_row <span class="sc">+</span> <span class="dv">1</span>)<span class="sc">:</span><span class="fu">nrow</span>(raw), ]</span>
+<span id="cb1-81"><a href="#cb1-81" aria-hidden="true" tabindex="-1"></a>  <span class="fu">names</span>(df) <span class="ot">&lt;-</span> header</span>
+<span id="cb1-82"><a href="#cb1-82" aria-hidden="true" tabindex="-1"></a>  <span class="co"># drop completely empty rows/cols</span></span>
+<span id="cb1-83"><a href="#cb1-83" aria-hidden="true" tabindex="-1"></a>  df <span class="ot">&lt;-</span> df <span class="sc">%&gt;%</span></span>
+<span id="cb1-84"><a href="#cb1-84" aria-hidden="true" tabindex="-1"></a>    <span class="fu">remove_empty</span>(<span class="st">"rows"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb1-85"><a href="#cb1-85" aria-hidden="true" tabindex="-1"></a>    <span class="fu">remove_empty</span>(<span class="st">"cols"</span>)</span>
+<span id="cb1-86"><a href="#cb1-86" aria-hidden="true" tabindex="-1"></a>  <span class="co"># add year from file name (e.g. "2019_bronx.xlsx")</span></span>
+<span id="cb1-87"><a href="#cb1-87" aria-hidden="true" tabindex="-1"></a>  name <span class="ot">&lt;-</span> <span class="fu">basename</span>(f)</span>
+<span id="cb1-88"><a href="#cb1-88" aria-hidden="true" tabindex="-1"></a>  year <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(<span class="fu">substr</span>(name, <span class="dv">1</span>, <span class="dv">4</span>))</span>
+<span id="cb1-89"><a href="#cb1-89" aria-hidden="true" tabindex="-1"></a>  df<span class="sc">$</span>year <span class="ot">&lt;-</span> year</span>
+<span id="cb1-90"><a href="#cb1-90" aria-hidden="true" tabindex="-1"></a>  df</span>
+<span id="cb1-91"><a href="#cb1-91" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb1-92"><a href="#cb1-92" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-93"><a href="#cb1-93" aria-hidden="true" tabindex="-1"></a>sales_2013_2023 <span class="ot">&lt;-</span> <span class="fu">bind_rows</span>(sales_list)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>Once the dataset has been downloaded, we will now clean the data</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(stringr)</span>
-<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(lubridate)</span>
-<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>clean_2013_2017 <span class="ot">&lt;-</span> <span class="cf">function</span>(df) {</span>
-<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>  df <span class="sc">%&gt;%</span></span>
-<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">clean_names</span>() <span class="sc">%&gt;%</span></span>
-<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">filter</span>(borough <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">"1"</span>,<span class="st">"2"</span>,<span class="st">"3"</span>,<span class="st">"4"</span>,<span class="st">"5"</span>)) <span class="sc">%&gt;%</span></span>
-<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(</span>
-<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>      <span class="at">borough =</span> <span class="fu">case_when</span>(</span>
-<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>        borough <span class="sc">==</span> <span class="st">"1"</span> <span class="sc">~</span> <span class="st">"Manhattan"</span>,</span>
-<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a>        borough <span class="sc">==</span> <span class="st">"2"</span> <span class="sc">~</span> <span class="st">"Bronx"</span>,</span>
-<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a>        borough <span class="sc">==</span> <span class="st">"3"</span> <span class="sc">~</span> <span class="st">"Brooklyn"</span>,</span>
-<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a>        borough <span class="sc">==</span> <span class="st">"4"</span> <span class="sc">~</span> <span class="st">"Queens"</span>,</span>
-<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a>        borough <span class="sc">==</span> <span class="st">"5"</span> <span class="sc">~</span> <span class="st">"Staten Island"</span></span>
-<span id="cb13-14"><a href="#cb13-14" aria-hidden="true" tabindex="-1"></a>      ),</span>
-<span id="cb13-15"><a href="#cb13-15" aria-hidden="true" tabindex="-1"></a>      <span class="at">sale_price =</span> <span class="fu">suppressWarnings</span>(<span class="fu">as.numeric</span>(<span class="fu">gsub</span>(<span class="st">"[^0-9]"</span>, <span class="st">""</span>, sale_price))),</span>
-<span id="cb13-16"><a href="#cb13-16" aria-hidden="true" tabindex="-1"></a>      <span class="at">sale_date  =</span> <span class="fu">suppressWarnings</span>(<span class="fu">as.Date</span>(<span class="fu">as.numeric</span>(sale_date), <span class="at">origin =</span> <span class="st">"1899-12-30"</span>))</span>
-<span id="cb13-17"><a href="#cb13-17" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">%&gt;%</span></span>
-<span id="cb13-18"><a href="#cb13-18" aria-hidden="true" tabindex="-1"></a>    <span class="fu">filter</span>(<span class="sc">!</span><span class="fu">is.na</span>(sale_price), sale_price <span class="sc">&gt;</span> <span class="dv">10000</span>) <span class="sc">%&gt;%</span></span>
-<span id="cb13-19"><a href="#cb13-19" aria-hidden="true" tabindex="-1"></a>    <span class="fu">select</span>(year, borough, neighborhood, address, zip_code, sale_price, sale_date) <span class="sc">%&gt;%</span></span>
-<span id="cb13-20"><a href="#cb13-20" aria-hidden="true" tabindex="-1"></a>    <span class="fu">arrange</span>(year, borough, sale_date)</span>
-<span id="cb13-21"><a href="#cb13-21" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb13-22"><a href="#cb13-22" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb13-23"><a href="#cb13-23" aria-hidden="true" tabindex="-1"></a>sales_clean_2013_2017 <span class="ot">&lt;-</span> <span class="fu">clean_2013_2017</span>(sales_raw_2013_2017)</span>
-<span id="cb13-24"><a href="#cb13-24" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb13-25"><a href="#cb13-25" aria-hidden="true" tabindex="-1"></a><span class="co"># ---- Quick checks ----</span></span>
-<span id="cb13-26"><a href="#cb13-26" aria-hidden="true" tabindex="-1"></a><span class="fu">message</span>(<span class="st">"2013-2017 cleaned:"</span>)</span>
-<span id="cb13-27"><a href="#cb13-27" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(sales_clean_2013_2017<span class="sc">$</span>sale_price)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>     Min.   1st Qu.    Median      Mean   3rd Qu.      Max. 
-1.000e+04 3.250e+05 5.600e+05 1.592e+06 9.790e+05 4.111e+09 </code></pre>
-</div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="fu">range</span>(sales_clean_2013_2017<span class="sc">$</span>sale_date, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>[1] "2013-01-01" "2017-12-31"</code></pre>
-</div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(sales_clean_2013_2017)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-stdout">
-<pre><code># A tibble: 6 × 7
-   year borough neighborhood            address   zip_code sale_price sale_date 
-  &lt;dbl&gt; &lt;chr&gt;   &lt;chr&gt;                   &lt;chr&gt;     &lt;chr&gt;         &lt;dbl&gt; &lt;date&gt;    
-1  2013 Bronx   MELROSE/CONCOURSE       1072 GRA… 10456        270000 2013-01-01
-2  2013 Bronx   KINGSBRIDGE/JEROME PARK 3875 WAL… 10463         94302 2013-01-03
-3  2013 Bronx   MELROSE/CONCOURSE       860 GRAN… 10451         50001 2013-01-03
-4  2013 Bronx   MORRISANIA/LONGWOOD     700-704 … 10455        439082 2013-01-03
-5  2013 Bronx   SOUNDVIEW               1420 NOB… 10472       7050000 2013-01-03
-6  2013 Bronx   THROGS NECK             2921 MIL… 10465        290000 2013-01-03</code></pre>
-</div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>clean_2018_2019 <span class="ot">&lt;-</span> <span class="cf">function</span>(df) {</span>
-<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>  df <span class="sc">%&gt;%</span></span>
-<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">clean_names</span>() <span class="sc">%&gt;%</span></span>
-<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Merge duplicate columns</span></span>
-<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(</span>
-<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>      <span class="at">borough_code_raw =</span> <span class="fu">coalesce</span>(borough, borough_2, borough_3),</span>
-<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a>      <span class="at">neighborhood_raw =</span> <span class="fu">coalesce</span>(neighborhood, neighborhood_2, neighborhood_3),</span>
-<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a>      <span class="at">address_raw      =</span> <span class="fu">coalesce</span>(address, address_2, address_3),</span>
-<span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a>      <span class="at">zip_code_raw     =</span> <span class="fu">coalesce</span>(zip_code, zip_code_2, zip_code_3),</span>
-<span id="cb19-11"><a href="#cb19-11" aria-hidden="true" tabindex="-1"></a>      <span class="at">sale_price_raw   =</span> <span class="fu">coalesce</span>(sale_price, sale_price_2, sale_price_3),</span>
-<span id="cb19-12"><a href="#cb19-12" aria-hidden="true" tabindex="-1"></a>      <span class="at">sale_date_raw    =</span> <span class="fu">coalesce</span>(sale_date, sale_date_2, sale_date_3)</span>
-<span id="cb19-13"><a href="#cb19-13" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">%&gt;%</span></span>
-<span id="cb19-14"><a href="#cb19-14" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Borough code -&gt; name</span></span>
-<span id="cb19-15"><a href="#cb19-15" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(</span>
-<span id="cb19-16"><a href="#cb19-16" aria-hidden="true" tabindex="-1"></a>      <span class="at">borough_code_raw =</span> <span class="fu">trimws</span>(borough_code_raw),</span>
-<span id="cb19-17"><a href="#cb19-17" aria-hidden="true" tabindex="-1"></a>      <span class="at">borough =</span> <span class="fu">case_when</span>(</span>
-<span id="cb19-18"><a href="#cb19-18" aria-hidden="true" tabindex="-1"></a>        borough_code_raw <span class="sc">==</span> <span class="st">"1"</span> <span class="sc">~</span> <span class="st">"Manhattan"</span>,</span>
-<span id="cb19-19"><a href="#cb19-19" aria-hidden="true" tabindex="-1"></a>        borough_code_raw <span class="sc">==</span> <span class="st">"2"</span> <span class="sc">~</span> <span class="st">"Bronx"</span>,</span>
-<span id="cb19-20"><a href="#cb19-20" aria-hidden="true" tabindex="-1"></a>        borough_code_raw <span class="sc">==</span> <span class="st">"3"</span> <span class="sc">~</span> <span class="st">"Brooklyn"</span>,</span>
-<span id="cb19-21"><a href="#cb19-21" aria-hidden="true" tabindex="-1"></a>        borough_code_raw <span class="sc">==</span> <span class="st">"4"</span> <span class="sc">~</span> <span class="st">"Queens"</span>,</span>
-<span id="cb19-22"><a href="#cb19-22" aria-hidden="true" tabindex="-1"></a>        borough_code_raw <span class="sc">==</span> <span class="st">"5"</span> <span class="sc">~</span> <span class="st">"Staten Island"</span>,</span>
-<span id="cb19-23"><a href="#cb19-23" aria-hidden="true" tabindex="-1"></a>        <span class="cn">TRUE</span> <span class="sc">~</span> <span class="cn">NA_character_</span></span>
-<span id="cb19-24"><a href="#cb19-24" aria-hidden="true" tabindex="-1"></a>      )</span>
-<span id="cb19-25"><a href="#cb19-25" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">%&gt;%</span></span>
-<span id="cb19-26"><a href="#cb19-26" aria-hidden="true" tabindex="-1"></a>    <span class="fu">filter</span>(<span class="sc">!</span><span class="fu">is.na</span>(borough)) <span class="sc">%&gt;%</span></span>
-<span id="cb19-27"><a href="#cb19-27" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Clean price</span></span>
-<span id="cb19-28"><a href="#cb19-28" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(</span>
-<span id="cb19-29"><a href="#cb19-29" aria-hidden="true" tabindex="-1"></a>      <span class="at">sale_price =</span> <span class="fu">suppressWarnings</span>(<span class="fu">as.numeric</span>(<span class="fu">gsub</span>(<span class="st">"[^0-9]"</span>, <span class="st">""</span>, sale_price_raw)))</span>
-<span id="cb19-30"><a href="#cb19-30" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">%&gt;%</span></span>
-<span id="cb19-31"><a href="#cb19-31" aria-hidden="true" tabindex="-1"></a>    <span class="co"># ---- Robust date parsing ----</span></span>
-<span id="cb19-32"><a href="#cb19-32" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(</span>
-<span id="cb19-33"><a href="#cb19-33" aria-hidden="true" tabindex="-1"></a>      <span class="co"># Try numeric Excel serial first</span></span>
-<span id="cb19-34"><a href="#cb19-34" aria-hidden="true" tabindex="-1"></a>      <span class="at">sale_date_num =</span> <span class="fu">suppressWarnings</span>(<span class="fu">as.numeric</span>(sale_date_raw)),</span>
-<span id="cb19-35"><a href="#cb19-35" aria-hidden="true" tabindex="-1"></a>      <span class="at">date_from_num =</span> <span class="fu">suppressWarnings</span>(<span class="fu">as.Date</span>(sale_date_num, <span class="at">origin =</span> <span class="st">"1899-12-30"</span>)),</span>
-<span id="cb19-36"><a href="#cb19-36" aria-hidden="true" tabindex="-1"></a>      <span class="co"># Try character dates (mdy, ymd)</span></span>
-<span id="cb19-37"><a href="#cb19-37" aria-hidden="true" tabindex="-1"></a>      <span class="at">date_from_char =</span> <span class="fu">suppressWarnings</span>(<span class="fu">parse_date_time</span>(sale_date_raw, <span class="at">orders =</span> <span class="fu">c</span>(<span class="st">"mdy"</span>, <span class="st">"ymd"</span>))),</span>
-<span id="cb19-38"><a href="#cb19-38" aria-hidden="true" tabindex="-1"></a>      <span class="co"># Final date = numeric first, otherwise character-parsed</span></span>
-<span id="cb19-39"><a href="#cb19-39" aria-hidden="true" tabindex="-1"></a>      <span class="at">sale_date =</span> <span class="fu">coalesce</span>(date_from_num, date_from_char)</span>
-<span id="cb19-40"><a href="#cb19-40" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">%&gt;%</span></span>
-<span id="cb19-41"><a href="#cb19-41" aria-hidden="true" tabindex="-1"></a>    </span>
-<span id="cb19-42"><a href="#cb19-42" aria-hidden="true" tabindex="-1"></a>    <span class="fu">filter</span>(<span class="sc">!</span><span class="fu">is.na</span>(sale_price), sale_price <span class="sc">&gt;</span> <span class="dv">10000</span>, <span class="sc">!</span><span class="fu">is.na</span>(sale_date)) <span class="sc">%&gt;%</span></span>
-<span id="cb19-43"><a href="#cb19-43" aria-hidden="true" tabindex="-1"></a>    <span class="fu">transmute</span>(</span>
-<span id="cb19-44"><a href="#cb19-44" aria-hidden="true" tabindex="-1"></a>      year,</span>
-<span id="cb19-45"><a href="#cb19-45" aria-hidden="true" tabindex="-1"></a>      borough,</span>
-<span id="cb19-46"><a href="#cb19-46" aria-hidden="true" tabindex="-1"></a>      <span class="at">neighborhood =</span> neighborhood_raw,</span>
-<span id="cb19-47"><a href="#cb19-47" aria-hidden="true" tabindex="-1"></a>      <span class="at">address      =</span> address_raw,</span>
-<span id="cb19-48"><a href="#cb19-48" aria-hidden="true" tabindex="-1"></a>      <span class="at">zip_code     =</span> zip_code_raw,</span>
-<span id="cb19-49"><a href="#cb19-49" aria-hidden="true" tabindex="-1"></a>      sale_price,</span>
-<span id="cb19-50"><a href="#cb19-50" aria-hidden="true" tabindex="-1"></a>      sale_date</span>
-<span id="cb19-51"><a href="#cb19-51" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">%&gt;%</span></span>
-<span id="cb19-52"><a href="#cb19-52" aria-hidden="true" tabindex="-1"></a>    <span class="fu">arrange</span>(year, borough, sale_date)</span>
-<span id="cb19-53"><a href="#cb19-53" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb19-54"><a href="#cb19-54" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb19-55"><a href="#cb19-55" aria-hidden="true" tabindex="-1"></a>clean_2020_2023 <span class="ot">&lt;-</span> <span class="cf">function</span>(df) {</span>
-<span id="cb19-56"><a href="#cb19-56" aria-hidden="true" tabindex="-1"></a>  df <span class="sc">%&gt;%</span></span>
-<span id="cb19-57"><a href="#cb19-57" aria-hidden="true" tabindex="-1"></a>    <span class="fu">clean_names</span>() <span class="sc">%&gt;%</span></span>
-<span id="cb19-58"><a href="#cb19-58" aria-hidden="true" tabindex="-1"></a>    <span class="co"># 1) Merge the duplicate columns (_2, _3) into one main set</span></span>
-<span id="cb19-59"><a href="#cb19-59" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(</span>
-<span id="cb19-60"><a href="#cb19-60" aria-hidden="true" tabindex="-1"></a>      <span class="at">borough_code_raw =</span> <span class="fu">coalesce</span>(borough, borough_2, borough_3),</span>
-<span id="cb19-61"><a href="#cb19-61" aria-hidden="true" tabindex="-1"></a>      <span class="at">neighborhood_raw =</span> <span class="fu">coalesce</span>(neighborhood, neighborhood_2, neighborhood_3),</span>
-<span id="cb19-62"><a href="#cb19-62" aria-hidden="true" tabindex="-1"></a>      <span class="at">address_raw      =</span> <span class="fu">coalesce</span>(address, address_2, address_3),</span>
-<span id="cb19-63"><a href="#cb19-63" aria-hidden="true" tabindex="-1"></a>      <span class="at">zip_code_raw     =</span> <span class="fu">coalesce</span>(zip_code, zip_code_2, zip_code_3),</span>
-<span id="cb19-64"><a href="#cb19-64" aria-hidden="true" tabindex="-1"></a>      <span class="at">sale_price_raw   =</span> <span class="fu">coalesce</span>(sale_price, sale_price_2, sale_price_3),</span>
-<span id="cb19-65"><a href="#cb19-65" aria-hidden="true" tabindex="-1"></a>      <span class="at">sale_date_raw    =</span> <span class="fu">coalesce</span>(sale_date, sale_date_2, sale_date_3)</span>
-<span id="cb19-66"><a href="#cb19-66" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">%&gt;%</span></span>
-<span id="cb19-67"><a href="#cb19-67" aria-hidden="true" tabindex="-1"></a>    <span class="co"># 2) Borough code -&gt; borough name</span></span>
-<span id="cb19-68"><a href="#cb19-68" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(</span>
-<span id="cb19-69"><a href="#cb19-69" aria-hidden="true" tabindex="-1"></a>      <span class="at">borough_code_raw =</span> <span class="fu">trimws</span>(borough_code_raw),</span>
-<span id="cb19-70"><a href="#cb19-70" aria-hidden="true" tabindex="-1"></a>      <span class="at">borough =</span> <span class="fu">case_when</span>(</span>
-<span id="cb19-71"><a href="#cb19-71" aria-hidden="true" tabindex="-1"></a>        borough_code_raw <span class="sc">==</span> <span class="st">"1"</span> <span class="sc">~</span> <span class="st">"Manhattan"</span>,</span>
-<span id="cb19-72"><a href="#cb19-72" aria-hidden="true" tabindex="-1"></a>        borough_code_raw <span class="sc">==</span> <span class="st">"2"</span> <span class="sc">~</span> <span class="st">"Bronx"</span>,</span>
-<span id="cb19-73"><a href="#cb19-73" aria-hidden="true" tabindex="-1"></a>        borough_code_raw <span class="sc">==</span> <span class="st">"3"</span> <span class="sc">~</span> <span class="st">"Brooklyn"</span>,</span>
-<span id="cb19-74"><a href="#cb19-74" aria-hidden="true" tabindex="-1"></a>        borough_code_raw <span class="sc">==</span> <span class="st">"4"</span> <span class="sc">~</span> <span class="st">"Queens"</span>,</span>
-<span id="cb19-75"><a href="#cb19-75" aria-hidden="true" tabindex="-1"></a>        borough_code_raw <span class="sc">==</span> <span class="st">"5"</span> <span class="sc">~</span> <span class="st">"Staten Island"</span>,</span>
-<span id="cb19-76"><a href="#cb19-76" aria-hidden="true" tabindex="-1"></a>        <span class="cn">TRUE</span> <span class="sc">~</span> <span class="cn">NA_character_</span></span>
-<span id="cb19-77"><a href="#cb19-77" aria-hidden="true" tabindex="-1"></a>      )</span>
-<span id="cb19-78"><a href="#cb19-78" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">%&gt;%</span></span>
-<span id="cb19-79"><a href="#cb19-79" aria-hidden="true" tabindex="-1"></a>    <span class="fu">filter</span>(<span class="sc">!</span><span class="fu">is.na</span>(borough)) <span class="sc">%&gt;%</span></span>
-<span id="cb19-80"><a href="#cb19-80" aria-hidden="true" tabindex="-1"></a>    <span class="co"># 3) Clean sale price</span></span>
-<span id="cb19-81"><a href="#cb19-81" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(</span>
-<span id="cb19-82"><a href="#cb19-82" aria-hidden="true" tabindex="-1"></a>      <span class="at">sale_price =</span> <span class="fu">suppressWarnings</span>(</span>
-<span id="cb19-83"><a href="#cb19-83" aria-hidden="true" tabindex="-1"></a>        <span class="fu">as.numeric</span>(<span class="fu">gsub</span>(<span class="st">"[^0-9]"</span>, <span class="st">""</span>, sale_price_raw))</span>
-<span id="cb19-84"><a href="#cb19-84" aria-hidden="true" tabindex="-1"></a>      )</span>
-<span id="cb19-85"><a href="#cb19-85" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">%&gt;%</span></span>
-<span id="cb19-86"><a href="#cb19-86" aria-hidden="true" tabindex="-1"></a>    <span class="co"># 4) Robust date parsing (Excel numbers + various text formats)</span></span>
-<span id="cb19-87"><a href="#cb19-87" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(</span>
-<span id="cb19-88"><a href="#cb19-88" aria-hidden="true" tabindex="-1"></a>      <span class="at">sale_date_num  =</span> <span class="fu">suppressWarnings</span>(<span class="fu">as.numeric</span>(sale_date_raw)),</span>
-<span id="cb19-89"><a href="#cb19-89" aria-hidden="true" tabindex="-1"></a>      <span class="at">date_from_num  =</span> <span class="fu">suppressWarnings</span>(<span class="fu">as.Date</span>(sale_date_num, <span class="at">origin =</span> <span class="st">"1899-12-30"</span>)),</span>
-<span id="cb19-90"><a href="#cb19-90" aria-hidden="true" tabindex="-1"></a>      <span class="at">date_from_char =</span> <span class="fu">suppressWarnings</span>(</span>
-<span id="cb19-91"><a href="#cb19-91" aria-hidden="true" tabindex="-1"></a>        <span class="fu">parse_date_time</span>(sale_date_raw, <span class="at">orders =</span> <span class="fu">c</span>(<span class="st">"ymd"</span>, <span class="st">"mdy"</span>, <span class="st">"dmy"</span>))</span>
-<span id="cb19-92"><a href="#cb19-92" aria-hidden="true" tabindex="-1"></a>      ),</span>
-<span id="cb19-93"><a href="#cb19-93" aria-hidden="true" tabindex="-1"></a>      <span class="at">sale_date      =</span> <span class="fu">coalesce</span>(date_from_num, date_from_char)</span>
-<span id="cb19-94"><a href="#cb19-94" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">%&gt;%</span></span>
-<span id="cb19-95"><a href="#cb19-95" aria-hidden="true" tabindex="-1"></a>    <span class="co"># 5) Keep only reasonable, non-missing sales</span></span>
-<span id="cb19-96"><a href="#cb19-96" aria-hidden="true" tabindex="-1"></a>    <span class="fu">filter</span>(</span>
-<span id="cb19-97"><a href="#cb19-97" aria-hidden="true" tabindex="-1"></a>      <span class="sc">!</span><span class="fu">is.na</span>(sale_price),</span>
-<span id="cb19-98"><a href="#cb19-98" aria-hidden="true" tabindex="-1"></a>      sale_price <span class="sc">&gt;</span> <span class="dv">10000</span>,</span>
-<span id="cb19-99"><a href="#cb19-99" aria-hidden="true" tabindex="-1"></a>      <span class="sc">!</span><span class="fu">is.na</span>(sale_date)</span>
-<span id="cb19-100"><a href="#cb19-100" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">%&gt;%</span></span>
-<span id="cb19-101"><a href="#cb19-101" aria-hidden="true" tabindex="-1"></a>    <span class="co"># 6) Final columns in same format as other years</span></span>
-<span id="cb19-102"><a href="#cb19-102" aria-hidden="true" tabindex="-1"></a>    <span class="fu">transmute</span>(</span>
-<span id="cb19-103"><a href="#cb19-103" aria-hidden="true" tabindex="-1"></a>      year,</span>
-<span id="cb19-104"><a href="#cb19-104" aria-hidden="true" tabindex="-1"></a>      borough,</span>
-<span id="cb19-105"><a href="#cb19-105" aria-hidden="true" tabindex="-1"></a>      <span class="at">neighborhood =</span> neighborhood_raw,</span>
-<span id="cb19-106"><a href="#cb19-106" aria-hidden="true" tabindex="-1"></a>      <span class="at">address      =</span> address_raw,</span>
-<span id="cb19-107"><a href="#cb19-107" aria-hidden="true" tabindex="-1"></a>      <span class="at">zip_code     =</span> zip_code_raw,</span>
-<span id="cb19-108"><a href="#cb19-108" aria-hidden="true" tabindex="-1"></a>      sale_price,</span>
-<span id="cb19-109"><a href="#cb19-109" aria-hidden="true" tabindex="-1"></a>      <span class="at">sale_date    =</span> <span class="fu">as.Date</span>(sale_date)</span>
-<span id="cb19-110"><a href="#cb19-110" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">%&gt;%</span></span>
-<span id="cb19-111"><a href="#cb19-111" aria-hidden="true" tabindex="-1"></a>    <span class="fu">arrange</span>(year, borough, sale_date)</span>
-<span id="cb19-112"><a href="#cb19-112" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(stringr)</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(lubridate)</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>clean_2013_2017 <span class="ot">&lt;-</span> <span class="cf">function</span>(df) {</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  df <span class="sc">%&gt;%</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">clean_names</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">filter</span>(borough <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">"1"</span>,<span class="st">"2"</span>,<span class="st">"3"</span>,<span class="st">"4"</span>,<span class="st">"5"</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>      <span class="at">borough =</span> <span class="fu">case_when</span>(</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>        borough <span class="sc">==</span> <span class="st">"1"</span> <span class="sc">~</span> <span class="st">"Manhattan"</span>,</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>        borough <span class="sc">==</span> <span class="st">"2"</span> <span class="sc">~</span> <span class="st">"Bronx"</span>,</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>        borough <span class="sc">==</span> <span class="st">"3"</span> <span class="sc">~</span> <span class="st">"Brooklyn"</span>,</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>        borough <span class="sc">==</span> <span class="st">"4"</span> <span class="sc">~</span> <span class="st">"Queens"</span>,</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>        borough <span class="sc">==</span> <span class="st">"5"</span> <span class="sc">~</span> <span class="st">"Staten Island"</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>      ),</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>      <span class="at">sale_price =</span> <span class="fu">suppressWarnings</span>(<span class="fu">as.numeric</span>(<span class="fu">gsub</span>(<span class="st">"[^0-9]"</span>, <span class="st">""</span>, sale_price))),</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>      <span class="at">sale_date  =</span> <span class="fu">suppressWarnings</span>(<span class="fu">as.Date</span>(<span class="fu">as.numeric</span>(sale_date), <span class="at">origin =</span> <span class="st">"1899-12-30"</span>))</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">%&gt;%</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>    <span class="fu">filter</span>(<span class="sc">!</span><span class="fu">is.na</span>(sale_price), sale_price <span class="sc">&gt;</span> <span class="dv">10000</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>    <span class="fu">select</span>(year, borough, neighborhood, address, zip_code, sale_price, sale_date) <span class="sc">%&gt;%</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>    <span class="fu">arrange</span>(year, borough, sale_date)</span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>sales_clean_2013_2017 <span class="ot">&lt;-</span> <span class="fu">clean_2013_2017</span>(sales_raw_2013_2017)</span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a><span class="co"># ---- Quick checks ----</span></span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a><span class="fu">message</span>(<span class="st">"2013-2017 cleaned:"</span>)</span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(sales_clean_2013_2017<span class="sc">$</span>sale_price)</span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a><span class="fu">range</span>(sales_clean_2013_2017<span class="sc">$</span>sale_date, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(sales_clean_2013_2017)</span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a>clean_2018_2019 <span class="ot">&lt;-</span> <span class="cf">function</span>(df) {</span>
+<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a>  df <span class="sc">%&gt;%</span></span>
+<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a>    <span class="fu">clean_names</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb2-35"><a href="#cb2-35" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Merge duplicate columns</span></span>
+<span id="cb2-36"><a href="#cb2-36" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(</span>
+<span id="cb2-37"><a href="#cb2-37" aria-hidden="true" tabindex="-1"></a>      <span class="at">borough_code_raw =</span> <span class="fu">coalesce</span>(borough, borough_2, borough_3),</span>
+<span id="cb2-38"><a href="#cb2-38" aria-hidden="true" tabindex="-1"></a>      <span class="at">neighborhood_raw =</span> <span class="fu">coalesce</span>(neighborhood, neighborhood_2, neighborhood_3),</span>
+<span id="cb2-39"><a href="#cb2-39" aria-hidden="true" tabindex="-1"></a>      <span class="at">address_raw      =</span> <span class="fu">coalesce</span>(address, address_2, address_3),</span>
+<span id="cb2-40"><a href="#cb2-40" aria-hidden="true" tabindex="-1"></a>      <span class="at">zip_code_raw     =</span> <span class="fu">coalesce</span>(zip_code, zip_code_2, zip_code_3),</span>
+<span id="cb2-41"><a href="#cb2-41" aria-hidden="true" tabindex="-1"></a>      <span class="at">sale_price_raw   =</span> <span class="fu">coalesce</span>(sale_price, sale_price_2, sale_price_3),</span>
+<span id="cb2-42"><a href="#cb2-42" aria-hidden="true" tabindex="-1"></a>      <span class="at">sale_date_raw    =</span> <span class="fu">coalesce</span>(sale_date, sale_date_2, sale_date_3)</span>
+<span id="cb2-43"><a href="#cb2-43" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">%&gt;%</span></span>
+<span id="cb2-44"><a href="#cb2-44" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Borough code -&gt; name</span></span>
+<span id="cb2-45"><a href="#cb2-45" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(</span>
+<span id="cb2-46"><a href="#cb2-46" aria-hidden="true" tabindex="-1"></a>      <span class="at">borough_code_raw =</span> <span class="fu">trimws</span>(borough_code_raw),</span>
+<span id="cb2-47"><a href="#cb2-47" aria-hidden="true" tabindex="-1"></a>      <span class="at">borough =</span> <span class="fu">case_when</span>(</span>
+<span id="cb2-48"><a href="#cb2-48" aria-hidden="true" tabindex="-1"></a>        borough_code_raw <span class="sc">==</span> <span class="st">"1"</span> <span class="sc">~</span> <span class="st">"Manhattan"</span>,</span>
+<span id="cb2-49"><a href="#cb2-49" aria-hidden="true" tabindex="-1"></a>        borough_code_raw <span class="sc">==</span> <span class="st">"2"</span> <span class="sc">~</span> <span class="st">"Bronx"</span>,</span>
+<span id="cb2-50"><a href="#cb2-50" aria-hidden="true" tabindex="-1"></a>        borough_code_raw <span class="sc">==</span> <span class="st">"3"</span> <span class="sc">~</span> <span class="st">"Brooklyn"</span>,</span>
+<span id="cb2-51"><a href="#cb2-51" aria-hidden="true" tabindex="-1"></a>        borough_code_raw <span class="sc">==</span> <span class="st">"4"</span> <span class="sc">~</span> <span class="st">"Queens"</span>,</span>
+<span id="cb2-52"><a href="#cb2-52" aria-hidden="true" tabindex="-1"></a>        borough_code_raw <span class="sc">==</span> <span class="st">"5"</span> <span class="sc">~</span> <span class="st">"Staten Island"</span>,</span>
+<span id="cb2-53"><a href="#cb2-53" aria-hidden="true" tabindex="-1"></a>        <span class="cn">TRUE</span> <span class="sc">~</span> <span class="cn">NA_character_</span></span>
+<span id="cb2-54"><a href="#cb2-54" aria-hidden="true" tabindex="-1"></a>      )</span>
+<span id="cb2-55"><a href="#cb2-55" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">%&gt;%</span></span>
+<span id="cb2-56"><a href="#cb2-56" aria-hidden="true" tabindex="-1"></a>    <span class="fu">filter</span>(<span class="sc">!</span><span class="fu">is.na</span>(borough)) <span class="sc">%&gt;%</span></span>
+<span id="cb2-57"><a href="#cb2-57" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Clean price</span></span>
+<span id="cb2-58"><a href="#cb2-58" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(</span>
+<span id="cb2-59"><a href="#cb2-59" aria-hidden="true" tabindex="-1"></a>      <span class="at">sale_price =</span> <span class="fu">suppressWarnings</span>(<span class="fu">as.numeric</span>(<span class="fu">gsub</span>(<span class="st">"[^0-9]"</span>, <span class="st">""</span>, sale_price_raw)))</span>
+<span id="cb2-60"><a href="#cb2-60" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">%&gt;%</span></span>
+<span id="cb2-61"><a href="#cb2-61" aria-hidden="true" tabindex="-1"></a>    <span class="co"># ---- Robust date parsing ----</span></span>
+<span id="cb2-62"><a href="#cb2-62" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(</span>
+<span id="cb2-63"><a href="#cb2-63" aria-hidden="true" tabindex="-1"></a>      <span class="co"># Try numeric Excel serial first</span></span>
+<span id="cb2-64"><a href="#cb2-64" aria-hidden="true" tabindex="-1"></a>      <span class="at">sale_date_num =</span> <span class="fu">suppressWarnings</span>(<span class="fu">as.numeric</span>(sale_date_raw)),</span>
+<span id="cb2-65"><a href="#cb2-65" aria-hidden="true" tabindex="-1"></a>      <span class="at">date_from_num =</span> <span class="fu">suppressWarnings</span>(<span class="fu">as.Date</span>(sale_date_num, <span class="at">origin =</span> <span class="st">"1899-12-30"</span>)),</span>
+<span id="cb2-66"><a href="#cb2-66" aria-hidden="true" tabindex="-1"></a>      <span class="co"># Try character dates (mdy, ymd)</span></span>
+<span id="cb2-67"><a href="#cb2-67" aria-hidden="true" tabindex="-1"></a>      <span class="at">date_from_char =</span> <span class="fu">suppressWarnings</span>(<span class="fu">parse_date_time</span>(sale_date_raw, <span class="at">orders =</span> <span class="fu">c</span>(<span class="st">"mdy"</span>, <span class="st">"ymd"</span>))),</span>
+<span id="cb2-68"><a href="#cb2-68" aria-hidden="true" tabindex="-1"></a>      <span class="co"># Final date = numeric first, otherwise character-parsed</span></span>
+<span id="cb2-69"><a href="#cb2-69" aria-hidden="true" tabindex="-1"></a>      <span class="at">sale_date =</span> <span class="fu">coalesce</span>(date_from_num, date_from_char)</span>
+<span id="cb2-70"><a href="#cb2-70" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">%&gt;%</span></span>
+<span id="cb2-71"><a href="#cb2-71" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb2-72"><a href="#cb2-72" aria-hidden="true" tabindex="-1"></a>    <span class="fu">filter</span>(<span class="sc">!</span><span class="fu">is.na</span>(sale_price), sale_price <span class="sc">&gt;</span> <span class="dv">10000</span>, <span class="sc">!</span><span class="fu">is.na</span>(sale_date)) <span class="sc">%&gt;%</span></span>
+<span id="cb2-73"><a href="#cb2-73" aria-hidden="true" tabindex="-1"></a>    <span class="fu">transmute</span>(</span>
+<span id="cb2-74"><a href="#cb2-74" aria-hidden="true" tabindex="-1"></a>      year,</span>
+<span id="cb2-75"><a href="#cb2-75" aria-hidden="true" tabindex="-1"></a>      borough,</span>
+<span id="cb2-76"><a href="#cb2-76" aria-hidden="true" tabindex="-1"></a>      <span class="at">neighborhood =</span> neighborhood_raw,</span>
+<span id="cb2-77"><a href="#cb2-77" aria-hidden="true" tabindex="-1"></a>      <span class="at">address      =</span> address_raw,</span>
+<span id="cb2-78"><a href="#cb2-78" aria-hidden="true" tabindex="-1"></a>      <span class="at">zip_code     =</span> zip_code_raw,</span>
+<span id="cb2-79"><a href="#cb2-79" aria-hidden="true" tabindex="-1"></a>      sale_price,</span>
+<span id="cb2-80"><a href="#cb2-80" aria-hidden="true" tabindex="-1"></a>      sale_date</span>
+<span id="cb2-81"><a href="#cb2-81" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">%&gt;%</span></span>
+<span id="cb2-82"><a href="#cb2-82" aria-hidden="true" tabindex="-1"></a>    <span class="fu">arrange</span>(year, borough, sale_date)</span>
+<span id="cb2-83"><a href="#cb2-83" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb2-84"><a href="#cb2-84" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-85"><a href="#cb2-85" aria-hidden="true" tabindex="-1"></a>clean_2020_2023 <span class="ot">&lt;-</span> <span class="cf">function</span>(df) {</span>
+<span id="cb2-86"><a href="#cb2-86" aria-hidden="true" tabindex="-1"></a>  df <span class="sc">%&gt;%</span></span>
+<span id="cb2-87"><a href="#cb2-87" aria-hidden="true" tabindex="-1"></a>    <span class="fu">clean_names</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb2-88"><a href="#cb2-88" aria-hidden="true" tabindex="-1"></a>    <span class="co"># 1) Merge the duplicate columns (_2, _3) into one main set</span></span>
+<span id="cb2-89"><a href="#cb2-89" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(</span>
+<span id="cb2-90"><a href="#cb2-90" aria-hidden="true" tabindex="-1"></a>      <span class="at">borough_code_raw =</span> <span class="fu">coalesce</span>(borough, borough_2, borough_3),</span>
+<span id="cb2-91"><a href="#cb2-91" aria-hidden="true" tabindex="-1"></a>      <span class="at">neighborhood_raw =</span> <span class="fu">coalesce</span>(neighborhood, neighborhood_2, neighborhood_3),</span>
+<span id="cb2-92"><a href="#cb2-92" aria-hidden="true" tabindex="-1"></a>      <span class="at">address_raw      =</span> <span class="fu">coalesce</span>(address, address_2, address_3),</span>
+<span id="cb2-93"><a href="#cb2-93" aria-hidden="true" tabindex="-1"></a>      <span class="at">zip_code_raw     =</span> <span class="fu">coalesce</span>(zip_code, zip_code_2, zip_code_3),</span>
+<span id="cb2-94"><a href="#cb2-94" aria-hidden="true" tabindex="-1"></a>      <span class="at">sale_price_raw   =</span> <span class="fu">coalesce</span>(sale_price, sale_price_2, sale_price_3),</span>
+<span id="cb2-95"><a href="#cb2-95" aria-hidden="true" tabindex="-1"></a>      <span class="at">sale_date_raw    =</span> <span class="fu">coalesce</span>(sale_date, sale_date_2, sale_date_3)</span>
+<span id="cb2-96"><a href="#cb2-96" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">%&gt;%</span></span>
+<span id="cb2-97"><a href="#cb2-97" aria-hidden="true" tabindex="-1"></a>    <span class="co"># 2) Borough code -&gt; borough name</span></span>
+<span id="cb2-98"><a href="#cb2-98" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(</span>
+<span id="cb2-99"><a href="#cb2-99" aria-hidden="true" tabindex="-1"></a>      <span class="at">borough_code_raw =</span> <span class="fu">trimws</span>(borough_code_raw),</span>
+<span id="cb2-100"><a href="#cb2-100" aria-hidden="true" tabindex="-1"></a>      <span class="at">borough =</span> <span class="fu">case_when</span>(</span>
+<span id="cb2-101"><a href="#cb2-101" aria-hidden="true" tabindex="-1"></a>        borough_code_raw <span class="sc">==</span> <span class="st">"1"</span> <span class="sc">~</span> <span class="st">"Manhattan"</span>,</span>
+<span id="cb2-102"><a href="#cb2-102" aria-hidden="true" tabindex="-1"></a>        borough_code_raw <span class="sc">==</span> <span class="st">"2"</span> <span class="sc">~</span> <span class="st">"Bronx"</span>,</span>
+<span id="cb2-103"><a href="#cb2-103" aria-hidden="true" tabindex="-1"></a>        borough_code_raw <span class="sc">==</span> <span class="st">"3"</span> <span class="sc">~</span> <span class="st">"Brooklyn"</span>,</span>
+<span id="cb2-104"><a href="#cb2-104" aria-hidden="true" tabindex="-1"></a>        borough_code_raw <span class="sc">==</span> <span class="st">"4"</span> <span class="sc">~</span> <span class="st">"Queens"</span>,</span>
+<span id="cb2-105"><a href="#cb2-105" aria-hidden="true" tabindex="-1"></a>        borough_code_raw <span class="sc">==</span> <span class="st">"5"</span> <span class="sc">~</span> <span class="st">"Staten Island"</span>,</span>
+<span id="cb2-106"><a href="#cb2-106" aria-hidden="true" tabindex="-1"></a>        <span class="cn">TRUE</span> <span class="sc">~</span> <span class="cn">NA_character_</span></span>
+<span id="cb2-107"><a href="#cb2-107" aria-hidden="true" tabindex="-1"></a>      )</span>
+<span id="cb2-108"><a href="#cb2-108" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">%&gt;%</span></span>
+<span id="cb2-109"><a href="#cb2-109" aria-hidden="true" tabindex="-1"></a>    <span class="fu">filter</span>(<span class="sc">!</span><span class="fu">is.na</span>(borough)) <span class="sc">%&gt;%</span></span>
+<span id="cb2-110"><a href="#cb2-110" aria-hidden="true" tabindex="-1"></a>    <span class="co"># 3) Clean sale price</span></span>
+<span id="cb2-111"><a href="#cb2-111" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(</span>
+<span id="cb2-112"><a href="#cb2-112" aria-hidden="true" tabindex="-1"></a>      <span class="at">sale_price =</span> <span class="fu">suppressWarnings</span>(</span>
+<span id="cb2-113"><a href="#cb2-113" aria-hidden="true" tabindex="-1"></a>        <span class="fu">as.numeric</span>(<span class="fu">gsub</span>(<span class="st">"[^0-9]"</span>, <span class="st">""</span>, sale_price_raw))</span>
+<span id="cb2-114"><a href="#cb2-114" aria-hidden="true" tabindex="-1"></a>      )</span>
+<span id="cb2-115"><a href="#cb2-115" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">%&gt;%</span></span>
+<span id="cb2-116"><a href="#cb2-116" aria-hidden="true" tabindex="-1"></a>    <span class="co"># 4) Robust date parsing (Excel numbers + various text formats)</span></span>
+<span id="cb2-117"><a href="#cb2-117" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(</span>
+<span id="cb2-118"><a href="#cb2-118" aria-hidden="true" tabindex="-1"></a>      <span class="at">sale_date_num  =</span> <span class="fu">suppressWarnings</span>(<span class="fu">as.numeric</span>(sale_date_raw)),</span>
+<span id="cb2-119"><a href="#cb2-119" aria-hidden="true" tabindex="-1"></a>      <span class="at">date_from_num  =</span> <span class="fu">suppressWarnings</span>(<span class="fu">as.Date</span>(sale_date_num, <span class="at">origin =</span> <span class="st">"1899-12-30"</span>)),</span>
+<span id="cb2-120"><a href="#cb2-120" aria-hidden="true" tabindex="-1"></a>      <span class="at">date_from_char =</span> <span class="fu">suppressWarnings</span>(</span>
+<span id="cb2-121"><a href="#cb2-121" aria-hidden="true" tabindex="-1"></a>        <span class="fu">parse_date_time</span>(sale_date_raw, <span class="at">orders =</span> <span class="fu">c</span>(<span class="st">"ymd"</span>, <span class="st">"mdy"</span>, <span class="st">"dmy"</span>))</span>
+<span id="cb2-122"><a href="#cb2-122" aria-hidden="true" tabindex="-1"></a>      ),</span>
+<span id="cb2-123"><a href="#cb2-123" aria-hidden="true" tabindex="-1"></a>      <span class="at">sale_date      =</span> <span class="fu">coalesce</span>(date_from_num, date_from_char)</span>
+<span id="cb2-124"><a href="#cb2-124" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">%&gt;%</span></span>
+<span id="cb2-125"><a href="#cb2-125" aria-hidden="true" tabindex="-1"></a>    <span class="co"># 5) Keep only reasonable, non-missing sales</span></span>
+<span id="cb2-126"><a href="#cb2-126" aria-hidden="true" tabindex="-1"></a>    <span class="fu">filter</span>(</span>
+<span id="cb2-127"><a href="#cb2-127" aria-hidden="true" tabindex="-1"></a>      <span class="sc">!</span><span class="fu">is.na</span>(sale_price),</span>
+<span id="cb2-128"><a href="#cb2-128" aria-hidden="true" tabindex="-1"></a>      sale_price <span class="sc">&gt;</span> <span class="dv">10000</span>,</span>
+<span id="cb2-129"><a href="#cb2-129" aria-hidden="true" tabindex="-1"></a>      <span class="sc">!</span><span class="fu">is.na</span>(sale_date)</span>
+<span id="cb2-130"><a href="#cb2-130" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">%&gt;%</span></span>
+<span id="cb2-131"><a href="#cb2-131" aria-hidden="true" tabindex="-1"></a>    <span class="co"># 6) Final columns in same format as other years</span></span>
+<span id="cb2-132"><a href="#cb2-132" aria-hidden="true" tabindex="-1"></a>    <span class="fu">transmute</span>(</span>
+<span id="cb2-133"><a href="#cb2-133" aria-hidden="true" tabindex="-1"></a>      year,</span>
+<span id="cb2-134"><a href="#cb2-134" aria-hidden="true" tabindex="-1"></a>      borough,</span>
+<span id="cb2-135"><a href="#cb2-135" aria-hidden="true" tabindex="-1"></a>      <span class="at">neighborhood =</span> neighborhood_raw,</span>
+<span id="cb2-136"><a href="#cb2-136" aria-hidden="true" tabindex="-1"></a>      <span class="at">address      =</span> address_raw,</span>
+<span id="cb2-137"><a href="#cb2-137" aria-hidden="true" tabindex="-1"></a>      <span class="at">zip_code     =</span> zip_code_raw,</span>
+<span id="cb2-138"><a href="#cb2-138" aria-hidden="true" tabindex="-1"></a>      sale_price,</span>
+<span id="cb2-139"><a href="#cb2-139" aria-hidden="true" tabindex="-1"></a>      <span class="at">sale_date    =</span> <span class="fu">as.Date</span>(sale_date)</span>
+<span id="cb2-140"><a href="#cb2-140" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">%&gt;%</span></span>
+<span id="cb2-141"><a href="#cb2-141" aria-hidden="true" tabindex="-1"></a>    <span class="fu">arrange</span>(year, borough, sale_date)</span>
+<span id="cb2-142"><a href="#cb2-142" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>Once cleaned, we will finally check our newly created tables to make sure they are correct.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Create cleaned tables for each period</span></span>
-<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>sales_clean_2013_2017 <span class="ot">&lt;-</span> <span class="fu">clean_2013_2017</span>(sales_raw_2013_2017)</span>
-<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>sales_clean_2018_2019 <span class="ot">&lt;-</span> <span class="fu">clean_2018_2019</span>(sales_raw_2018_2019)</span>
-<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>sales_clean_2020_2023 <span class="ot">&lt;-</span> <span class="fu">clean_2020_2023</span>(sales_raw_2020_2023)</span>
-<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Make sure sale_date is Date in every piece</span></span>
-<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a>sales_clean_2013_2017 <span class="ot">&lt;-</span> sales_clean_2013_2017 <span class="sc">%&gt;%</span></span>
-<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">sale_date =</span> <span class="fu">as.Date</span>(sale_date))</span>
-<span id="cb20-9"><a href="#cb20-9" aria-hidden="true" tabindex="-1"></a>sales_clean_2018_2019 <span class="ot">&lt;-</span> sales_clean_2018_2019 <span class="sc">%&gt;%</span></span>
-<span id="cb20-10"><a href="#cb20-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">sale_date =</span> <span class="fu">as.Date</span>(sale_date))</span>
-<span id="cb20-11"><a href="#cb20-11" aria-hidden="true" tabindex="-1"></a>sales_clean_2020_2023 <span class="ot">&lt;-</span> sales_clean_2020_2023 <span class="sc">%&gt;%</span></span>
-<span id="cb20-12"><a href="#cb20-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">sale_date =</span> <span class="fu">as.Date</span>(sale_date))</span>
-<span id="cb20-13"><a href="#cb20-13" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb20-14"><a href="#cb20-14" aria-hidden="true" tabindex="-1"></a><span class="co"># ---- Combine all years 2013–2023 ----</span></span>
-<span id="cb20-15"><a href="#cb20-15" aria-hidden="true" tabindex="-1"></a>sales_clean_2013_2023 <span class="ot">&lt;-</span> <span class="fu">bind_rows</span>(</span>
-<span id="cb20-16"><a href="#cb20-16" aria-hidden="true" tabindex="-1"></a>  sales_clean_2013_2017,</span>
-<span id="cb20-17"><a href="#cb20-17" aria-hidden="true" tabindex="-1"></a>  sales_clean_2018_2019,</span>
-<span id="cb20-18"><a href="#cb20-18" aria-hidden="true" tabindex="-1"></a>  sales_clean_2020_2023</span>
-<span id="cb20-19"><a href="#cb20-19" aria-hidden="true" tabindex="-1"></a>) <span class="sc">%&gt;%</span></span>
-<span id="cb20-20"><a href="#cb20-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(year, borough, sale_date)</span>
-<span id="cb20-21"><a href="#cb20-21" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb20-22"><a href="#cb20-22" aria-hidden="true" tabindex="-1"></a><span class="co"># ---- Final quick checks ----</span></span>
-<span id="cb20-23"><a href="#cb20-23" aria-hidden="true" tabindex="-1"></a><span class="fu">message</span>(<span class="st">"Combined 2013–2023:"</span>)</span>
-<span id="cb20-24"><a href="#cb20-24" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(<span class="fu">table</span>(sales_clean_2013_2023<span class="sc">$</span>year))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>
- 2013  2014  2015  2016  2017  2018  2019  2020  2021  2022  2023 
-60218 59839 62938 60756 60866 56817 55983 43788 70829 65899 49475 </code></pre>
-</div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="fu">range</span>(sales_clean_2013_2023<span class="sc">$</span>sale_date, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>[1] "2013-01-01" "2023-12-31"</code></pre>
-</div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(sales_clean_2013_2023<span class="sc">$</span>sale_price)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>     Min.   1st Qu.    Median      Mean   3rd Qu.      Max. 
-1.000e+04 4.000e+05 6.700e+05 1.818e+06 1.160e+06 4.111e+09 </code></pre>
-</div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(sales_clean_2013_2023)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-stdout">
-<pre><code># A tibble: 6 × 7
-   year borough neighborhood            address   zip_code sale_price sale_date 
-  &lt;dbl&gt; &lt;chr&gt;   &lt;chr&gt;                   &lt;chr&gt;     &lt;chr&gt;         &lt;dbl&gt; &lt;date&gt;    
-1  2013 Bronx   MELROSE/CONCOURSE       1072 GRA… 10456        270000 2013-01-01
-2  2013 Bronx   KINGSBRIDGE/JEROME PARK 3875 WAL… 10463         94302 2013-01-03
-3  2013 Bronx   MELROSE/CONCOURSE       860 GRAN… 10451         50001 2013-01-03
-4  2013 Bronx   MORRISANIA/LONGWOOD     700-704 … 10455        439082 2013-01-03
-5  2013 Bronx   SOUNDVIEW               1420 NOB… 10472       7050000 2013-01-03
-6  2013 Bronx   THROGS NECK             2921 MIL… 10465        290000 2013-01-03</code></pre>
-</div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb28"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="fu">tail</span>(sales_clean_2013_2023)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-stdout">
-<pre><code># A tibble: 6 × 7
-   year borough       neighborhood      address   zip_code sale_price sale_date 
-  &lt;dbl&gt; &lt;chr&gt;         &lt;chr&gt;             &lt;chr&gt;     &lt;chr&gt;         &lt;dbl&gt; &lt;date&gt;    
-1  2023 Staten Island PLEASANT PLAINS   30 CORDE… 10309       1100000 2023-12-29
-2  2023 Staten Island SOUTH BEACH       12 MALLO… 10305        850000 2023-12-29
-3  2023 Staten Island SOUTH BEACH       16 MALLO… 10305        850000 2023-12-29
-4  2023 Staten Island STAPLETON         64 HARRI… 10304        753000 2023-12-29
-5  2023 Staten Island SUNNYSIDE         55 ONTAR… 10301        463500 2023-12-29
-6  2023 Staten Island WEST NEW BRIGHTON 154 ELIZ… 10310        745000 2023-12-29</code></pre>
-</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Create cleaned tables for each period</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>sales_clean_2013_2017 <span class="ot">&lt;-</span> <span class="fu">clean_2013_2017</span>(sales_raw_2013_2017)</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>sales_clean_2018_2019 <span class="ot">&lt;-</span> <span class="fu">clean_2018_2019</span>(sales_raw_2018_2019)</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>sales_clean_2020_2023 <span class="ot">&lt;-</span> <span class="fu">clean_2020_2023</span>(sales_raw_2020_2023)</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Make sure sale_date is Date in every piece</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>sales_clean_2013_2017 <span class="ot">&lt;-</span> sales_clean_2013_2017 <span class="sc">%&gt;%</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">sale_date =</span> <span class="fu">as.Date</span>(sale_date))</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>sales_clean_2018_2019 <span class="ot">&lt;-</span> sales_clean_2018_2019 <span class="sc">%&gt;%</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">sale_date =</span> <span class="fu">as.Date</span>(sale_date))</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>sales_clean_2020_2023 <span class="ot">&lt;-</span> sales_clean_2020_2023 <span class="sc">%&gt;%</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">sale_date =</span> <span class="fu">as.Date</span>(sale_date))</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a><span class="co"># ---- Combine all years 2013–2023 ----</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>sales_clean_2013_2023 <span class="ot">&lt;-</span> <span class="fu">bind_rows</span>(</span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>  sales_clean_2013_2017,</span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>  sales_clean_2018_2019,</span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>  sales_clean_2020_2023</span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>) <span class="sc">%&gt;%</span></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(year, borough, sale_date)</span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a><span class="co"># ---- Final quick checks ----</span></span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a><span class="fu">message</span>(<span class="st">"Combined 2013–2023:"</span>)</span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(<span class="fu">table</span>(sales_clean_2013_2023<span class="sc">$</span>year))</span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a><span class="fu">range</span>(sales_clean_2013_2023<span class="sc">$</span>sale_date, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(sales_clean_2013_2023<span class="sc">$</span>sale_price)</span>
+<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(sales_clean_2013_2023)</span>
+<span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a><span class="fu">tail</span>(sales_clean_2013_2023)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>Next we will acquire our dataset of Yearly Census of Income and Rent from the Bureau of Labor Statistics from the same time range.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb30"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span>
-<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(glue)</span>
-<span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(readxl)</span>
-<span id="cb30-4"><a href="#cb30-4" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidycensus)</span>
-<span id="cb30-5"><a href="#cb30-5" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span>(<span class="sc">!</span><span class="fu">dir.exists</span>(<span class="fu">file.path</span>(<span class="st">"data"</span>, <span class="st">"finalproject"</span>))){</span>
-<span id="cb30-6"><a href="#cb30-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">dir.create</span>(<span class="fu">file.path</span>(<span class="st">"data"</span>, <span class="st">"finalproject"</span>), <span class="at">showWarnings=</span><span class="cn">FALSE</span>, <span class="at">recursive=</span><span class="cn">TRUE</span>)</span>
-<span id="cb30-7"><a href="#cb30-7" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb30-8"><a href="#cb30-8" aria-hidden="true" tabindex="-1"></a>library <span class="ot">&lt;-</span> <span class="cf">function</span>(pkg){</span>
-<span id="cb30-9"><a href="#cb30-9" aria-hidden="true" tabindex="-1"></a>  <span class="do">## Mask base::library() to automatically install packages if needed</span></span>
-<span id="cb30-10"><a href="#cb30-10" aria-hidden="true" tabindex="-1"></a>  <span class="do">## Masking is important here so downlit picks up packages and links</span></span>
-<span id="cb30-11"><a href="#cb30-11" aria-hidden="true" tabindex="-1"></a>  <span class="do">## to documentation</span></span>
-<span id="cb30-12"><a href="#cb30-12" aria-hidden="true" tabindex="-1"></a>  pkg <span class="ot">&lt;-</span> <span class="fu">as.character</span>(<span class="fu">substitute</span>(pkg))</span>
-<span id="cb30-13"><a href="#cb30-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">options</span>(<span class="at">repos =</span> <span class="fu">c</span>(<span class="at">CRAN =</span> <span class="st">"https://cloud.r-project.org"</span>))</span>
-<span id="cb30-14"><a href="#cb30-14" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span>(<span class="sc">!</span><span class="fu">require</span>(pkg, <span class="at">character.only=</span><span class="cn">TRUE</span>, <span class="at">quietly=</span><span class="cn">TRUE</span>)) <span class="fu">install.packages</span>(pkg)</span>
-<span id="cb30-15"><a href="#cb30-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">stopifnot</span>(<span class="fu">require</span>(pkg, <span class="at">character.only=</span><span class="cn">TRUE</span>, <span class="at">quietly=</span><span class="cn">TRUE</span>))</span>
-<span id="cb30-16"><a href="#cb30-16" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb30-17"><a href="#cb30-17" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb30-18"><a href="#cb30-18" aria-hidden="true" tabindex="-1"></a>get_acs_all_years <span class="ot">&lt;-</span> <span class="cf">function</span>(variable, <span class="at">geography=</span><span class="st">"zcta"</span>,</span>
-<span id="cb30-19"><a href="#cb30-19" aria-hidden="true" tabindex="-1"></a>                              <span class="at">start_year=</span><span class="dv">2013</span>, <span class="at">end_year=</span><span class="dv">2023</span>){</span>
-<span id="cb30-20"><a href="#cb30-20" aria-hidden="true" tabindex="-1"></a>  fname <span class="ot">&lt;-</span> <span class="fu">glue</span>(<span class="st">"{variable}_{geography}_{start_year}_{end_year}.csv"</span>)</span>
-<span id="cb30-21"><a href="#cb30-21" aria-hidden="true" tabindex="-1"></a>  fname <span class="ot">&lt;-</span> <span class="fu">file.path</span>(<span class="st">"data"</span>, <span class="st">"finalproject"</span>, fname)</span>
-<span id="cb30-22"><a href="#cb30-22" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb30-23"><a href="#cb30-23" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span>(<span class="sc">!</span><span class="fu">file.exists</span>(fname)){</span>
-<span id="cb30-24"><a href="#cb30-24" aria-hidden="true" tabindex="-1"></a>    YEARS <span class="ot">&lt;-</span> <span class="fu">seq</span>(start_year, end_year)</span>
-<span id="cb30-25"><a href="#cb30-25" aria-hidden="true" tabindex="-1"></a>    YEARS <span class="ot">&lt;-</span> YEARS[YEARS <span class="sc">!=</span> <span class="dv">2020</span>] <span class="co"># Drop 2020 - No survey (covid)</span></span>
-<span id="cb30-26"><a href="#cb30-26" aria-hidden="true" tabindex="-1"></a>    </span>
-<span id="cb30-27"><a href="#cb30-27" aria-hidden="true" tabindex="-1"></a>    ALL_DATA <span class="ot">&lt;-</span> <span class="fu">map</span>(YEARS, <span class="cf">function</span>(yy){</span>
-<span id="cb30-28"><a href="#cb30-28" aria-hidden="true" tabindex="-1"></a>      tidycensus<span class="sc">::</span><span class="fu">get_acs</span>(geography, variable, <span class="at">year=</span>yy, <span class="at">survey=</span><span class="st">"acs5"</span>) <span class="sc">|&gt;</span></span>
-<span id="cb30-29"><a href="#cb30-29" aria-hidden="true" tabindex="-1"></a>        <span class="fu">mutate</span>(<span class="at">year=</span>yy) <span class="sc">|&gt;</span></span>
-<span id="cb30-30"><a href="#cb30-30" aria-hidden="true" tabindex="-1"></a>        <span class="fu">select</span>(<span class="sc">-</span>moe, <span class="sc">-</span>variable) <span class="sc">|&gt;</span></span>
-<span id="cb30-31"><a href="#cb30-31" aria-hidden="true" tabindex="-1"></a>        <span class="fu">rename</span>(<span class="sc">!!</span><span class="at">variable :=</span> estimate)</span>
-<span id="cb30-32"><a href="#cb30-32" aria-hidden="true" tabindex="-1"></a>    }) <span class="sc">|&gt;</span> <span class="fu">bind_rows</span>()</span>
-<span id="cb30-33"><a href="#cb30-33" aria-hidden="true" tabindex="-1"></a>    </span>
-<span id="cb30-34"><a href="#cb30-34" aria-hidden="true" tabindex="-1"></a>    <span class="fu">write_csv</span>(ALL_DATA, fname)</span>
-<span id="cb30-35"><a href="#cb30-35" aria-hidden="true" tabindex="-1"></a>  }</span>
-<span id="cb30-36"><a href="#cb30-36" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb30-37"><a href="#cb30-37" aria-hidden="true" tabindex="-1"></a>  <span class="fu">read_csv</span>(fname, <span class="at">show_col_types=</span><span class="cn">FALSE</span>)</span>
-<span id="cb30-38"><a href="#cb30-38" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb30-39"><a href="#cb30-39" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb30-40"><a href="#cb30-40" aria-hidden="true" tabindex="-1"></a>NYC_ZCTAS <span class="ot">&lt;-</span> <span class="fu">c</span>(</span>
-<span id="cb30-41"><a href="#cb30-41" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Bronx (005)</span></span>
-<span id="cb30-42"><a href="#cb30-42" aria-hidden="true" tabindex="-1"></a>  <span class="st">"10451"</span>, <span class="st">"10452"</span>, <span class="st">"10453"</span>, <span class="st">"10454"</span>, <span class="st">"10455"</span>, <span class="st">"10456"</span>, <span class="st">"10457"</span>, <span class="st">"10458"</span>, </span>
-<span id="cb30-43"><a href="#cb30-43" aria-hidden="true" tabindex="-1"></a>  <span class="st">"10459"</span>, <span class="st">"10460"</span>, <span class="st">"10461"</span>, <span class="st">"10462"</span>, <span class="st">"10463"</span>, <span class="st">"10464"</span>, <span class="st">"10465"</span>, <span class="st">"10466"</span>, </span>
-<span id="cb30-44"><a href="#cb30-44" aria-hidden="true" tabindex="-1"></a>  <span class="st">"10467"</span>, <span class="st">"10468"</span>, <span class="st">"10469"</span>, <span class="st">"10470"</span>, <span class="st">"10471"</span>, <span class="st">"10472"</span>, <span class="st">"10473"</span>, <span class="st">"10474"</span>, </span>
-<span id="cb30-45"><a href="#cb30-45" aria-hidden="true" tabindex="-1"></a>  <span class="st">"10475"</span>,</span>
-<span id="cb30-46"><a href="#cb30-46" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Brooklyn (047) - Kings County</span></span>
-<span id="cb30-47"><a href="#cb30-47" aria-hidden="true" tabindex="-1"></a>  <span class="st">"11201"</span>, <span class="st">"11203"</span>, <span class="st">"11204"</span>, <span class="st">"11205"</span>, <span class="st">"11206"</span>, <span class="st">"11207"</span>, <span class="st">"11208"</span>, <span class="st">"11209"</span>, </span>
-<span id="cb30-48"><a href="#cb30-48" aria-hidden="true" tabindex="-1"></a>  <span class="st">"11210"</span>, <span class="st">"11211"</span>, <span class="st">"11212"</span>, <span class="st">"11213"</span>, <span class="st">"11214"</span>, <span class="st">"11215"</span>, <span class="st">"11216"</span>, <span class="st">"11217"</span>, </span>
-<span id="cb30-49"><a href="#cb30-49" aria-hidden="true" tabindex="-1"></a>  <span class="st">"11218"</span>, <span class="st">"11219"</span>, <span class="st">"11220"</span>, <span class="st">"11221"</span>, <span class="st">"11222"</span>, <span class="st">"11223"</span>, <span class="st">"11224"</span>, <span class="st">"11225"</span>, </span>
-<span id="cb30-50"><a href="#cb30-50" aria-hidden="true" tabindex="-1"></a>  <span class="st">"11226"</span>, <span class="st">"11228"</span>, <span class="st">"11229"</span>, <span class="st">"11230"</span>, <span class="st">"11231"</span>, <span class="st">"11232"</span>, <span class="st">"11233"</span>, <span class="st">"11234"</span>, </span>
-<span id="cb30-51"><a href="#cb30-51" aria-hidden="true" tabindex="-1"></a>  <span class="st">"11235"</span>, <span class="st">"11236"</span>, <span class="st">"11237"</span>, <span class="st">"11238"</span>, <span class="st">"11239"</span>,</span>
-<span id="cb30-52"><a href="#cb30-52" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Manhattan (061) - New York County</span></span>
-<span id="cb30-53"><a href="#cb30-53" aria-hidden="true" tabindex="-1"></a>  <span class="st">"10001"</span>, <span class="st">"10002"</span>, <span class="st">"10003"</span>, <span class="st">"10004"</span>, <span class="st">"10005"</span>, <span class="st">"10006"</span>, <span class="st">"10007"</span>, <span class="st">"10009"</span>, </span>
-<span id="cb30-54"><a href="#cb30-54" aria-hidden="true" tabindex="-1"></a>  <span class="st">"10010"</span>, <span class="st">"10011"</span>, <span class="st">"10012"</span>, <span class="st">"10013"</span>, <span class="st">"10014"</span>, <span class="st">"10016"</span>, <span class="st">"10017"</span>, <span class="st">"10018"</span>, </span>
-<span id="cb30-55"><a href="#cb30-55" aria-hidden="true" tabindex="-1"></a>  <span class="st">"10019"</span>, <span class="st">"10020"</span>, <span class="st">"10021"</span>, <span class="st">"10022"</span>, <span class="st">"10023"</span>, <span class="st">"10024"</span>, <span class="st">"10025"</span>, <span class="st">"10026"</span>, </span>
-<span id="cb30-56"><a href="#cb30-56" aria-hidden="true" tabindex="-1"></a>  <span class="st">"10027"</span>, <span class="st">"10028"</span>, <span class="st">"10029"</span>, <span class="st">"10030"</span>, <span class="st">"10031"</span>, <span class="st">"10032"</span>, <span class="st">"10033"</span>, <span class="st">"10034"</span>, </span>
-<span id="cb30-57"><a href="#cb30-57" aria-hidden="true" tabindex="-1"></a>  <span class="st">"10035"</span>, <span class="st">"10036"</span>, <span class="st">"10037"</span>, <span class="st">"10038"</span>, <span class="st">"10039"</span>, <span class="st">"10040"</span>, <span class="st">"10044"</span>,</span>
-<span id="cb30-58"><a href="#cb30-58" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Queens (081)</span></span>
-<span id="cb30-59"><a href="#cb30-59" aria-hidden="true" tabindex="-1"></a>  <span class="st">"11101"</span>, <span class="st">"11102"</span>, <span class="st">"11103"</span>, <span class="st">"11104"</span>, <span class="st">"11105"</span>, <span class="st">"11106"</span>, <span class="st">"11354"</span>, <span class="st">"11355"</span>, </span>
-<span id="cb30-60"><a href="#cb30-60" aria-hidden="true" tabindex="-1"></a>  <span class="st">"11356"</span>, <span class="st">"11357"</span>, <span class="st">"11358"</span>, <span class="st">"11360"</span>, <span class="st">"11361"</span>, <span class="st">"11362"</span>, <span class="st">"11363"</span>, <span class="st">"11364"</span>, </span>
-<span id="cb30-61"><a href="#cb30-61" aria-hidden="true" tabindex="-1"></a>  <span class="st">"11365"</span>, <span class="st">"11366"</span>, <span class="st">"11367"</span>, <span class="st">"11368"</span>, <span class="st">"11369"</span>, <span class="st">"11370"</span>, <span class="st">"11371"</span>, <span class="st">"11372"</span>, </span>
-<span id="cb30-62"><a href="#cb30-62" aria-hidden="true" tabindex="-1"></a>  <span class="st">"11373"</span>, <span class="st">"11374"</span>, <span class="st">"11375"</span>, <span class="st">"11377"</span>, <span class="st">"11378"</span>, <span class="st">"11379"</span>, <span class="st">"11385"</span>, <span class="st">"11411"</span>, </span>
-<span id="cb30-63"><a href="#cb30-63" aria-hidden="true" tabindex="-1"></a>  <span class="st">"11412"</span>, <span class="st">"11413"</span>, <span class="st">"11414"</span>, <span class="st">"11415"</span>, <span class="st">"11416"</span>, <span class="st">"11417"</span>, <span class="st">"11418"</span>, <span class="st">"11419"</span>, </span>
-<span id="cb30-64"><a href="#cb30-64" aria-hidden="true" tabindex="-1"></a>  <span class="st">"11420"</span>, <span class="st">"11421"</span>, <span class="st">"11422"</span>, <span class="st">"11423"</span>, <span class="st">"11426"</span>, <span class="st">"11427"</span>, <span class="st">"11428"</span>, <span class="st">"11429"</span>, </span>
-<span id="cb30-65"><a href="#cb30-65" aria-hidden="true" tabindex="-1"></a>  <span class="st">"11432"</span>, <span class="st">"11433"</span>, <span class="st">"11434"</span>, <span class="st">"11435"</span>, <span class="st">"11436"</span>, <span class="st">"11691"</span>, <span class="st">"11692"</span>, <span class="st">"11693"</span>, </span>
-<span id="cb30-66"><a href="#cb30-66" aria-hidden="true" tabindex="-1"></a>  <span class="st">"11694"</span>, <span class="st">"11695"</span>, <span class="st">"11697"</span>,</span>
-<span id="cb30-67"><a href="#cb30-67" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Staten Island (085) - Richmond County</span></span>
-<span id="cb30-68"><a href="#cb30-68" aria-hidden="true" tabindex="-1"></a>  <span class="st">"10301"</span>, <span class="st">"10302"</span>, <span class="st">"10303"</span>, <span class="st">"10304"</span>, <span class="st">"10305"</span>, <span class="st">"10306"</span>, <span class="st">"10307"</span>, <span class="st">"10308"</span>, </span>
-<span id="cb30-69"><a href="#cb30-69" aria-hidden="true" tabindex="-1"></a>  <span class="st">"10309"</span>, <span class="st">"10310"</span>, <span class="st">"10311"</span>, <span class="st">"10312"</span>, <span class="st">"10314"</span></span>
-<span id="cb30-70"><a href="#cb30-70" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb30-71"><a href="#cb30-71" aria-hidden="true" tabindex="-1"></a><span class="co"># Household income (12 month)</span></span>
-<span id="cb30-72"><a href="#cb30-72" aria-hidden="true" tabindex="-1"></a>INCOME <span class="ot">&lt;-</span> <span class="fu">get_acs_all_years</span>(<span class="st">"B19013_001"</span>) <span class="sc">|&gt;</span></span>
-<span id="cb30-73"><a href="#cb30-73" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="at">household_income =</span> B19013_001)</span>
-<span id="cb30-74"><a href="#cb30-74" aria-hidden="true" tabindex="-1"></a>INCOME <span class="ot">&lt;-</span> INCOME <span class="sc">|&gt;</span></span>
-<span id="cb30-75"><a href="#cb30-75" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(GEOID <span class="sc">%in%</span> NYC_ZCTAS)</span>
-<span id="cb30-76"><a href="#cb30-76" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb30-77"><a href="#cb30-77" aria-hidden="true" tabindex="-1"></a><span class="co"># Monthly rent</span></span>
-<span id="cb30-78"><a href="#cb30-78" aria-hidden="true" tabindex="-1"></a>RENT <span class="ot">&lt;-</span> <span class="fu">get_acs_all_years</span>(<span class="st">"B25064_001"</span>) <span class="sc">|&gt;</span></span>
-<span id="cb30-79"><a href="#cb30-79" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="at">monthly_rent =</span> B25064_001)</span>
-<span id="cb30-80"><a href="#cb30-80" aria-hidden="true" tabindex="-1"></a>RENT  <span class="ot">&lt;-</span> RENT  <span class="sc">|&gt;</span></span>
-<span id="cb30-81"><a href="#cb30-81" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(GEOID <span class="sc">%in%</span> NYC_ZCTAS)</span>
-<span id="cb30-82"><a href="#cb30-82" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb30-83"><a href="#cb30-83" aria-hidden="true" tabindex="-1"></a><span class="co"># Combine tables</span></span>
-<span id="cb30-84"><a href="#cb30-84" aria-hidden="true" tabindex="-1"></a>JOIN_TABLE <span class="ot">&lt;-</span> INCOME <span class="sc">|&gt;</span></span>
-<span id="cb30-85"><a href="#cb30-85" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(RENT, <span class="at">by =</span> <span class="fu">c</span>(<span class="st">"GEOID"</span>, <span class="st">"year"</span>,<span class="st">"NAME"</span> )) <span class="sc">|&gt;</span></span>
-<span id="cb30-86"><a href="#cb30-86" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="at">zipcode =</span> <span class="st">"GEOID"</span>) <span class="sc">|&gt;</span></span>
-<span id="cb30-87"><a href="#cb30-87" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="sc">-</span>NAME)</span>
-<span id="cb30-88"><a href="#cb30-88" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb30-89"><a href="#cb30-89" aria-hidden="true" tabindex="-1"></a><span class="do">## optional function to format the column name</span></span>
-<span id="cb30-90"><a href="#cb30-90" aria-hidden="true" tabindex="-1"></a>format_titles <span class="ot">&lt;-</span> <span class="cf">function</span>(df){</span>
-<span id="cb30-91"><a href="#cb30-91" aria-hidden="true" tabindex="-1"></a>  <span class="fu">colnames</span>(df) <span class="ot">&lt;-</span> <span class="fu">str_replace_all</span>(<span class="fu">colnames</span>(df), <span class="st">"_"</span>, <span class="st">" "</span>) <span class="sc">|&gt;</span> <span class="fu">str_to_title</span>()</span>
-<span id="cb30-92"><a href="#cb30-92" aria-hidden="true" tabindex="-1"></a>  df</span>
-<span id="cb30-93"><a href="#cb30-93" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb30-94"><a href="#cb30-94" aria-hidden="true" tabindex="-1"></a>JOIN_TABLE <span class="sc">|&gt;</span> </span>
-<span id="cb30-95"><a href="#cb30-95" aria-hidden="true" tabindex="-1"></a>  <span class="fu">format_titles</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(glue)</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(readxl)</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidycensus)</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span>(<span class="sc">!</span><span class="fu">dir.exists</span>(<span class="fu">file.path</span>(<span class="st">"data"</span>, <span class="st">"finalproject"</span>))){</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">dir.create</span>(<span class="fu">file.path</span>(<span class="st">"data"</span>, <span class="st">"finalproject"</span>), <span class="at">showWarnings=</span><span class="cn">FALSE</span>, <span class="at">recursive=</span><span class="cn">TRUE</span>)</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>library <span class="ot">&lt;-</span> <span class="cf">function</span>(pkg){</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>  <span class="do">## Mask base::library() to automatically install packages if needed</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>  <span class="do">## Masking is important here so downlit picks up packages and links</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>  <span class="do">## to documentation</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>  pkg <span class="ot">&lt;-</span> <span class="fu">as.character</span>(<span class="fu">substitute</span>(pkg))</span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">options</span>(<span class="at">repos =</span> <span class="fu">c</span>(<span class="at">CRAN =</span> <span class="st">"https://cloud.r-project.org"</span>))</span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span>(<span class="sc">!</span><span class="fu">require</span>(pkg, <span class="at">character.only=</span><span class="cn">TRUE</span>, <span class="at">quietly=</span><span class="cn">TRUE</span>)) <span class="fu">install.packages</span>(pkg)</span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">stopifnot</span>(<span class="fu">require</span>(pkg, <span class="at">character.only=</span><span class="cn">TRUE</span>, <span class="at">quietly=</span><span class="cn">TRUE</span>))</span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>get_acs_all_years <span class="ot">&lt;-</span> <span class="cf">function</span>(variable, <span class="at">geography=</span><span class="st">"zcta"</span>,</span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>                              <span class="at">start_year=</span><span class="dv">2013</span>, <span class="at">end_year=</span><span class="dv">2023</span>){</span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>  fname <span class="ot">&lt;-</span> <span class="fu">glue</span>(<span class="st">"{variable}_{geography}_{start_year}_{end_year}.csv"</span>)</span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>  fname <span class="ot">&lt;-</span> <span class="fu">file.path</span>(<span class="st">"data"</span>, <span class="st">"finalproject"</span>, fname)</span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span>(<span class="sc">!</span><span class="fu">file.exists</span>(fname)){</span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a>    YEARS <span class="ot">&lt;-</span> <span class="fu">seq</span>(start_year, end_year)</span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a>    YEARS <span class="ot">&lt;-</span> YEARS[YEARS <span class="sc">!=</span> <span class="dv">2020</span>] <span class="co"># Drop 2020 - No survey (covid)</span></span>
+<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a>    ALL_DATA <span class="ot">&lt;-</span> <span class="fu">map</span>(YEARS, <span class="cf">function</span>(yy){</span>
+<span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a>      tidycensus<span class="sc">::</span><span class="fu">get_acs</span>(geography, variable, <span class="at">year=</span>yy, <span class="at">survey=</span><span class="st">"acs5"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb4-29"><a href="#cb4-29" aria-hidden="true" tabindex="-1"></a>        <span class="fu">mutate</span>(<span class="at">year=</span>yy) <span class="sc">|&gt;</span></span>
+<span id="cb4-30"><a href="#cb4-30" aria-hidden="true" tabindex="-1"></a>        <span class="fu">select</span>(<span class="sc">-</span>moe, <span class="sc">-</span>variable) <span class="sc">|&gt;</span></span>
+<span id="cb4-31"><a href="#cb4-31" aria-hidden="true" tabindex="-1"></a>        <span class="fu">rename</span>(<span class="sc">!!</span><span class="at">variable :=</span> estimate)</span>
+<span id="cb4-32"><a href="#cb4-32" aria-hidden="true" tabindex="-1"></a>    }) <span class="sc">|&gt;</span> <span class="fu">bind_rows</span>()</span>
+<span id="cb4-33"><a href="#cb4-33" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb4-34"><a href="#cb4-34" aria-hidden="true" tabindex="-1"></a>    <span class="fu">write_csv</span>(ALL_DATA, fname)</span>
+<span id="cb4-35"><a href="#cb4-35" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb4-36"><a href="#cb4-36" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb4-37"><a href="#cb4-37" aria-hidden="true" tabindex="-1"></a>  <span class="fu">read_csv</span>(fname, <span class="at">show_col_types=</span><span class="cn">FALSE</span>)</span>
+<span id="cb4-38"><a href="#cb4-38" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb4-39"><a href="#cb4-39" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-40"><a href="#cb4-40" aria-hidden="true" tabindex="-1"></a>NYC_ZCTAS <span class="ot">&lt;-</span> <span class="fu">c</span>(</span>
+<span id="cb4-41"><a href="#cb4-41" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Bronx (005)</span></span>
+<span id="cb4-42"><a href="#cb4-42" aria-hidden="true" tabindex="-1"></a>  <span class="st">"10451"</span>, <span class="st">"10452"</span>, <span class="st">"10453"</span>, <span class="st">"10454"</span>, <span class="st">"10455"</span>, <span class="st">"10456"</span>, <span class="st">"10457"</span>, <span class="st">"10458"</span>, </span>
+<span id="cb4-43"><a href="#cb4-43" aria-hidden="true" tabindex="-1"></a>  <span class="st">"10459"</span>, <span class="st">"10460"</span>, <span class="st">"10461"</span>, <span class="st">"10462"</span>, <span class="st">"10463"</span>, <span class="st">"10464"</span>, <span class="st">"10465"</span>, <span class="st">"10466"</span>, </span>
+<span id="cb4-44"><a href="#cb4-44" aria-hidden="true" tabindex="-1"></a>  <span class="st">"10467"</span>, <span class="st">"10468"</span>, <span class="st">"10469"</span>, <span class="st">"10470"</span>, <span class="st">"10471"</span>, <span class="st">"10472"</span>, <span class="st">"10473"</span>, <span class="st">"10474"</span>, </span>
+<span id="cb4-45"><a href="#cb4-45" aria-hidden="true" tabindex="-1"></a>  <span class="st">"10475"</span>,</span>
+<span id="cb4-46"><a href="#cb4-46" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Brooklyn (047) - Kings County</span></span>
+<span id="cb4-47"><a href="#cb4-47" aria-hidden="true" tabindex="-1"></a>  <span class="st">"11201"</span>, <span class="st">"11203"</span>, <span class="st">"11204"</span>, <span class="st">"11205"</span>, <span class="st">"11206"</span>, <span class="st">"11207"</span>, <span class="st">"11208"</span>, <span class="st">"11209"</span>, </span>
+<span id="cb4-48"><a href="#cb4-48" aria-hidden="true" tabindex="-1"></a>  <span class="st">"11210"</span>, <span class="st">"11211"</span>, <span class="st">"11212"</span>, <span class="st">"11213"</span>, <span class="st">"11214"</span>, <span class="st">"11215"</span>, <span class="st">"11216"</span>, <span class="st">"11217"</span>, </span>
+<span id="cb4-49"><a href="#cb4-49" aria-hidden="true" tabindex="-1"></a>  <span class="st">"11218"</span>, <span class="st">"11219"</span>, <span class="st">"11220"</span>, <span class="st">"11221"</span>, <span class="st">"11222"</span>, <span class="st">"11223"</span>, <span class="st">"11224"</span>, <span class="st">"11225"</span>, </span>
+<span id="cb4-50"><a href="#cb4-50" aria-hidden="true" tabindex="-1"></a>  <span class="st">"11226"</span>, <span class="st">"11228"</span>, <span class="st">"11229"</span>, <span class="st">"11230"</span>, <span class="st">"11231"</span>, <span class="st">"11232"</span>, <span class="st">"11233"</span>, <span class="st">"11234"</span>, </span>
+<span id="cb4-51"><a href="#cb4-51" aria-hidden="true" tabindex="-1"></a>  <span class="st">"11235"</span>, <span class="st">"11236"</span>, <span class="st">"11237"</span>, <span class="st">"11238"</span>, <span class="st">"11239"</span>,</span>
+<span id="cb4-52"><a href="#cb4-52" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Manhattan (061) - New York County</span></span>
+<span id="cb4-53"><a href="#cb4-53" aria-hidden="true" tabindex="-1"></a>  <span class="st">"10001"</span>, <span class="st">"10002"</span>, <span class="st">"10003"</span>, <span class="st">"10004"</span>, <span class="st">"10005"</span>, <span class="st">"10006"</span>, <span class="st">"10007"</span>, <span class="st">"10009"</span>, </span>
+<span id="cb4-54"><a href="#cb4-54" aria-hidden="true" tabindex="-1"></a>  <span class="st">"10010"</span>, <span class="st">"10011"</span>, <span class="st">"10012"</span>, <span class="st">"10013"</span>, <span class="st">"10014"</span>, <span class="st">"10016"</span>, <span class="st">"10017"</span>, <span class="st">"10018"</span>, </span>
+<span id="cb4-55"><a href="#cb4-55" aria-hidden="true" tabindex="-1"></a>  <span class="st">"10019"</span>, <span class="st">"10020"</span>, <span class="st">"10021"</span>, <span class="st">"10022"</span>, <span class="st">"10023"</span>, <span class="st">"10024"</span>, <span class="st">"10025"</span>, <span class="st">"10026"</span>, </span>
+<span id="cb4-56"><a href="#cb4-56" aria-hidden="true" tabindex="-1"></a>  <span class="st">"10027"</span>, <span class="st">"10028"</span>, <span class="st">"10029"</span>, <span class="st">"10030"</span>, <span class="st">"10031"</span>, <span class="st">"10032"</span>, <span class="st">"10033"</span>, <span class="st">"10034"</span>, </span>
+<span id="cb4-57"><a href="#cb4-57" aria-hidden="true" tabindex="-1"></a>  <span class="st">"10035"</span>, <span class="st">"10036"</span>, <span class="st">"10037"</span>, <span class="st">"10038"</span>, <span class="st">"10039"</span>, <span class="st">"10040"</span>, <span class="st">"10044"</span>,</span>
+<span id="cb4-58"><a href="#cb4-58" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Queens (081)</span></span>
+<span id="cb4-59"><a href="#cb4-59" aria-hidden="true" tabindex="-1"></a>  <span class="st">"11101"</span>, <span class="st">"11102"</span>, <span class="st">"11103"</span>, <span class="st">"11104"</span>, <span class="st">"11105"</span>, <span class="st">"11106"</span>, <span class="st">"11354"</span>, <span class="st">"11355"</span>, </span>
+<span id="cb4-60"><a href="#cb4-60" aria-hidden="true" tabindex="-1"></a>  <span class="st">"11356"</span>, <span class="st">"11357"</span>, <span class="st">"11358"</span>, <span class="st">"11360"</span>, <span class="st">"11361"</span>, <span class="st">"11362"</span>, <span class="st">"11363"</span>, <span class="st">"11364"</span>, </span>
+<span id="cb4-61"><a href="#cb4-61" aria-hidden="true" tabindex="-1"></a>  <span class="st">"11365"</span>, <span class="st">"11366"</span>, <span class="st">"11367"</span>, <span class="st">"11368"</span>, <span class="st">"11369"</span>, <span class="st">"11370"</span>, <span class="st">"11371"</span>, <span class="st">"11372"</span>, </span>
+<span id="cb4-62"><a href="#cb4-62" aria-hidden="true" tabindex="-1"></a>  <span class="st">"11373"</span>, <span class="st">"11374"</span>, <span class="st">"11375"</span>, <span class="st">"11377"</span>, <span class="st">"11378"</span>, <span class="st">"11379"</span>, <span class="st">"11385"</span>, <span class="st">"11411"</span>, </span>
+<span id="cb4-63"><a href="#cb4-63" aria-hidden="true" tabindex="-1"></a>  <span class="st">"11412"</span>, <span class="st">"11413"</span>, <span class="st">"11414"</span>, <span class="st">"11415"</span>, <span class="st">"11416"</span>, <span class="st">"11417"</span>, <span class="st">"11418"</span>, <span class="st">"11419"</span>, </span>
+<span id="cb4-64"><a href="#cb4-64" aria-hidden="true" tabindex="-1"></a>  <span class="st">"11420"</span>, <span class="st">"11421"</span>, <span class="st">"11422"</span>, <span class="st">"11423"</span>, <span class="st">"11426"</span>, <span class="st">"11427"</span>, <span class="st">"11428"</span>, <span class="st">"11429"</span>, </span>
+<span id="cb4-65"><a href="#cb4-65" aria-hidden="true" tabindex="-1"></a>  <span class="st">"11432"</span>, <span class="st">"11433"</span>, <span class="st">"11434"</span>, <span class="st">"11435"</span>, <span class="st">"11436"</span>, <span class="st">"11691"</span>, <span class="st">"11692"</span>, <span class="st">"11693"</span>, </span>
+<span id="cb4-66"><a href="#cb4-66" aria-hidden="true" tabindex="-1"></a>  <span class="st">"11694"</span>, <span class="st">"11695"</span>, <span class="st">"11697"</span>,</span>
+<span id="cb4-67"><a href="#cb4-67" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Staten Island (085) - Richmond County</span></span>
+<span id="cb4-68"><a href="#cb4-68" aria-hidden="true" tabindex="-1"></a>  <span class="st">"10301"</span>, <span class="st">"10302"</span>, <span class="st">"10303"</span>, <span class="st">"10304"</span>, <span class="st">"10305"</span>, <span class="st">"10306"</span>, <span class="st">"10307"</span>, <span class="st">"10308"</span>, </span>
+<span id="cb4-69"><a href="#cb4-69" aria-hidden="true" tabindex="-1"></a>  <span class="st">"10309"</span>, <span class="st">"10310"</span>, <span class="st">"10311"</span>, <span class="st">"10312"</span>, <span class="st">"10314"</span></span>
+<span id="cb4-70"><a href="#cb4-70" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb4-71"><a href="#cb4-71" aria-hidden="true" tabindex="-1"></a><span class="co"># Household income (12 month)</span></span>
+<span id="cb4-72"><a href="#cb4-72" aria-hidden="true" tabindex="-1"></a>INCOME <span class="ot">&lt;-</span> <span class="fu">get_acs_all_years</span>(<span class="st">"B19013_001"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb4-73"><a href="#cb4-73" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="at">household_income =</span> B19013_001)</span>
+<span id="cb4-74"><a href="#cb4-74" aria-hidden="true" tabindex="-1"></a>INCOME <span class="ot">&lt;-</span> INCOME <span class="sc">|&gt;</span></span>
+<span id="cb4-75"><a href="#cb4-75" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(GEOID <span class="sc">%in%</span> NYC_ZCTAS)</span>
+<span id="cb4-76"><a href="#cb4-76" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-77"><a href="#cb4-77" aria-hidden="true" tabindex="-1"></a><span class="co"># Monthly rent</span></span>
+<span id="cb4-78"><a href="#cb4-78" aria-hidden="true" tabindex="-1"></a>RENT <span class="ot">&lt;-</span> <span class="fu">get_acs_all_years</span>(<span class="st">"B25064_001"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb4-79"><a href="#cb4-79" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="at">monthly_rent =</span> B25064_001)</span>
+<span id="cb4-80"><a href="#cb4-80" aria-hidden="true" tabindex="-1"></a>RENT  <span class="ot">&lt;-</span> RENT  <span class="sc">|&gt;</span></span>
+<span id="cb4-81"><a href="#cb4-81" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(GEOID <span class="sc">%in%</span> NYC_ZCTAS)</span>
+<span id="cb4-82"><a href="#cb4-82" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-83"><a href="#cb4-83" aria-hidden="true" tabindex="-1"></a><span class="co"># Combine tables</span></span>
+<span id="cb4-84"><a href="#cb4-84" aria-hidden="true" tabindex="-1"></a>JOIN_TABLE <span class="ot">&lt;-</span> INCOME <span class="sc">|&gt;</span></span>
+<span id="cb4-85"><a href="#cb4-85" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(RENT, <span class="at">by =</span> <span class="fu">c</span>(<span class="st">"GEOID"</span>, <span class="st">"year"</span>,<span class="st">"NAME"</span> )) <span class="sc">|&gt;</span></span>
+<span id="cb4-86"><a href="#cb4-86" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="at">zipcode =</span> <span class="st">"GEOID"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb4-87"><a href="#cb4-87" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="sc">-</span>NAME)</span>
+<span id="cb4-88"><a href="#cb4-88" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-89"><a href="#cb4-89" aria-hidden="true" tabindex="-1"></a><span class="do">## optional function to format the column name</span></span>
+<span id="cb4-90"><a href="#cb4-90" aria-hidden="true" tabindex="-1"></a>format_titles <span class="ot">&lt;-</span> <span class="cf">function</span>(df){</span>
+<span id="cb4-91"><a href="#cb4-91" aria-hidden="true" tabindex="-1"></a>  <span class="fu">colnames</span>(df) <span class="ot">&lt;-</span> <span class="fu">str_replace_all</span>(<span class="fu">colnames</span>(df), <span class="st">"_"</span>, <span class="st">" "</span>) <span class="sc">|&gt;</span> <span class="fu">str_to_title</span>()</span>
+<span id="cb4-92"><a href="#cb4-92" aria-hidden="true" tabindex="-1"></a>  df</span>
+<span id="cb4-93"><a href="#cb4-93" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb4-94"><a href="#cb4-94" aria-hidden="true" tabindex="-1"></a>JOIN_TABLE <span class="sc">|&gt;</span> </span>
+<span id="cb4-95"><a href="#cb4-95" aria-hidden="true" tabindex="-1"></a>  <span class="fu">format_titles</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 1,720 × 4
    Zipcode `Household Income`  Year `Monthly Rent`
@@ -639,74 +551,67 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 <p>Lastly, we will obtain our last data set and combine it with our rent tables.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb32"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(readr)</span>
-<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(dplyr)</span>
-<span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb32-4"><a href="#cb32-4" aria-hidden="true" tabindex="-1"></a>clean_permits <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="st">"data/clean_permits.csv"</span>)</span>
-<span id="cb32-5"><a href="#cb32-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb32-6"><a href="#cb32-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Ensure ZIP codes match ACS format</span></span>
-<span id="cb32-7"><a href="#cb32-7" aria-hidden="true" tabindex="-1"></a>clean_permits <span class="ot">&lt;-</span> clean_permits <span class="sc">|&gt;</span></span>
-<span id="cb32-8"><a href="#cb32-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">zipcode =</span> <span class="fu">str_pad</span>(<span class="fu">as.character</span>(zipcode), <span class="dv">5</span>, <span class="at">pad =</span> <span class="st">"0"</span>))</span>
-<span id="cb32-9"><a href="#cb32-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb32-10"><a href="#cb32-10" aria-hidden="true" tabindex="-1"></a>JOIN_TABLE <span class="ot">&lt;-</span> JOIN_TABLE <span class="sc">|&gt;</span></span>
-<span id="cb32-11"><a href="#cb32-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">zipcode =</span> <span class="fu">str_pad</span>(<span class="fu">as.character</span>(zipcode), <span class="dv">5</span>, <span class="at">pad =</span> <span class="st">"0"</span>))</span>
-<span id="cb32-12"><a href="#cb32-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb32-13"><a href="#cb32-13" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="st">"start_year"</span> <span class="sc">%in%</span> <span class="fu">names</span>(clean_permits)) {</span>
-<span id="cb32-14"><a href="#cb32-14" aria-hidden="true" tabindex="-1"></a>  clean_permits <span class="ot">&lt;-</span> clean_permits <span class="sc">|&gt;</span></span>
-<span id="cb32-15"><a href="#cb32-15" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">start_year =</span> lubridate<span class="sc">::</span><span class="fu">year</span>(start_date))</span>
-<span id="cb32-16"><a href="#cb32-16" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb32-17"><a href="#cb32-17" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb32-18"><a href="#cb32-18" aria-hidden="true" tabindex="-1"></a><span class="co"># Join ACS income onto filming permits</span></span>
-<span id="cb32-19"><a href="#cb32-19" aria-hidden="true" tabindex="-1"></a>permits_income <span class="ot">&lt;-</span> clean_permits <span class="sc">|&gt;</span></span>
-<span id="cb32-20"><a href="#cb32-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(</span>
-<span id="cb32-21"><a href="#cb32-21" aria-hidden="true" tabindex="-1"></a>    JOIN_TABLE,</span>
-<span id="cb32-22"><a href="#cb32-22" aria-hidden="true" tabindex="-1"></a>    <span class="at">by =</span> <span class="fu">c</span>(<span class="st">"zipcode"</span>, <span class="st">"start_year"</span> <span class="ot">=</span> <span class="st">"year"</span>)</span>
-<span id="cb32-23"><a href="#cb32-23" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
-<span id="cb32-24"><a href="#cb32-24" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="sc">!</span><span class="fu">is.na</span>(household_income))   <span class="co"># Keep only ZIPs with ACS income</span></span>
-<span id="cb32-25"><a href="#cb32-25" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb32-26"><a href="#cb32-26" aria-hidden="true" tabindex="-1"></a>permits_zip <span class="ot">&lt;-</span> permits_income <span class="sc">|&gt;</span></span>
-<span id="cb32-27"><a href="#cb32-27" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(zipcode, household_income) <span class="sc">|&gt;</span></span>
-<span id="cb32-28"><a href="#cb32-28" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
-<span id="cb32-29"><a href="#cb32-29" aria-hidden="true" tabindex="-1"></a>    <span class="at">n_permits =</span> <span class="fu">n</span>(),</span>
-<span id="cb32-30"><a href="#cb32-30" aria-hidden="true" tabindex="-1"></a>    <span class="at">first_year =</span> <span class="fu">min</span>(start_year),</span>
-<span id="cb32-31"><a href="#cb32-31" aria-hidden="true" tabindex="-1"></a>    <span class="at">last_year =</span> <span class="fu">max</span>(start_year),</span>
-<span id="cb32-32"><a href="#cb32-32" aria-hidden="true" tabindex="-1"></a>    <span class="at">n_years =</span> last_year <span class="sc">-</span> first_year <span class="sc">+</span> <span class="dv">1</span>,</span>
-<span id="cb32-33"><a href="#cb32-33" aria-hidden="true" tabindex="-1"></a>    <span class="at">permits_per_year =</span> n_permits <span class="sc">/</span> n_years,</span>
-<span id="cb32-34"><a href="#cb32-34" aria-hidden="true" tabindex="-1"></a>    <span class="at">.groups =</span> <span class="st">"drop"</span></span>
-<span id="cb32-35"><a href="#cb32-35" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb32-36"><a href="#cb32-36" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb32-37"><a href="#cb32-37" aria-hidden="true" tabindex="-1"></a>permits_zip <span class="ot">&lt;-</span> permits_zip <span class="sc">|&gt;</span></span>
-<span id="cb32-38"><a href="#cb32-38" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
-<span id="cb32-39"><a href="#cb32-39" aria-hidden="true" tabindex="-1"></a>    <span class="at">income_group =</span> <span class="fu">cut</span>(</span>
-<span id="cb32-40"><a href="#cb32-40" aria-hidden="true" tabindex="-1"></a>      household_income,</span>
-<span id="cb32-41"><a href="#cb32-41" aria-hidden="true" tabindex="-1"></a>      <span class="at">breaks =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">50000</span>, <span class="dv">75000</span>, <span class="dv">100000</span>, <span class="dv">150000</span>, <span class="cn">Inf</span>),</span>
-<span id="cb32-42"><a href="#cb32-42" aria-hidden="true" tabindex="-1"></a>      <span class="at">labels =</span> <span class="fu">c</span>(<span class="st">"&lt;$50k"</span>, <span class="st">"$50–75k"</span>, <span class="st">"$75–100k"</span>, <span class="st">"$100–150k"</span>, <span class="st">"$150k+"</span>),</span>
-<span id="cb32-43"><a href="#cb32-43" aria-hidden="true" tabindex="-1"></a>      <span class="at">right =</span> <span class="cn">FALSE</span></span>
-<span id="cb32-44"><a href="#cb32-44" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb32-45"><a href="#cb32-45" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb32-46"><a href="#cb32-46" aria-hidden="true" tabindex="-1"></a>income_summary <span class="ot">&lt;-</span> permits_zip <span class="sc">|&gt;</span></span>
-<span id="cb32-47"><a href="#cb32-47" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(income_group) <span class="sc">|&gt;</span></span>
-<span id="cb32-48"><a href="#cb32-48" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
-<span id="cb32-49"><a href="#cb32-49" aria-hidden="true" tabindex="-1"></a>    <span class="at">n_zips =</span> <span class="fu">n</span>(),</span>
-<span id="cb32-50"><a href="#cb32-50" aria-hidden="true" tabindex="-1"></a>    <span class="at">pct_with_any_filming =</span> <span class="fu">mean</span>(n_permits <span class="sc">&gt;</span> <span class="dv">0</span>),</span>
-<span id="cb32-51"><a href="#cb32-51" aria-hidden="true" tabindex="-1"></a>    <span class="at">median_permits_per_year =</span> <span class="fu">median</span>(permits_per_year),</span>
-<span id="cb32-52"><a href="#cb32-52" aria-hidden="true" tabindex="-1"></a>    <span class="at">mean_permits_per_year =</span> <span class="fu">mean</span>(permits_per_year),</span>
-<span id="cb32-53"><a href="#cb32-53" aria-hidden="true" tabindex="-1"></a>    <span class="at">.groups =</span> <span class="st">"drop"</span></span>
-<span id="cb32-54"><a href="#cb32-54" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb32-55"><a href="#cb32-55" aria-hidden="true" tabindex="-1"></a>income_summary</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-stdout">
-<pre><code># A tibble: 5 × 5
-  income_group n_zips pct_with_any_filming median_permits_per_year
-  &lt;fct&gt;         &lt;int&gt;                &lt;dbl&gt;                   &lt;dbl&gt;
-1 &lt;$50k           436                    1                     15 
-2 $50–75k         541                    1                     11 
-3 $75–100k        335                    1                     12 
-4 $100–150k       214                    1                    112.
-5 $150k+           49                    1                     78 
-# ℹ 1 more variable: mean_permits_per_year &lt;dbl&gt;</code></pre>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(readr)</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(dplyr)</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>clean_permits <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="st">"data/clean_permits.csv"</span>)</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Ensure ZIP codes match ACS format</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>clean_permits <span class="ot">&lt;-</span> clean_permits <span class="sc">|&gt;</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">zipcode =</span> <span class="fu">str_pad</span>(<span class="fu">as.character</span>(zipcode), <span class="dv">5</span>, <span class="at">pad =</span> <span class="st">"0"</span>))</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>JOIN_TABLE <span class="ot">&lt;-</span> JOIN_TABLE <span class="sc">|&gt;</span></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">zipcode =</span> <span class="fu">str_pad</span>(<span class="fu">as.character</span>(zipcode), <span class="dv">5</span>, <span class="at">pad =</span> <span class="st">"0"</span>))</span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="st">"start_year"</span> <span class="sc">%in%</span> <span class="fu">names</span>(clean_permits)) {</span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>  clean_permits <span class="ot">&lt;-</span> clean_permits <span class="sc">|&gt;</span></span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">start_year =</span> lubridate<span class="sc">::</span><span class="fu">year</span>(start_date))</span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a><span class="co"># Join ACS income onto filming permits</span></span>
+<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a>permits_income <span class="ot">&lt;-</span> clean_permits <span class="sc">|&gt;</span></span>
+<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(</span>
+<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a>    JOIN_TABLE,</span>
+<span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a>    <span class="at">by =</span> <span class="fu">c</span>(<span class="st">"zipcode"</span>, <span class="st">"start_year"</span> <span class="ot">=</span> <span class="st">"year"</span>)</span>
+<span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb6-24"><a href="#cb6-24" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="sc">!</span><span class="fu">is.na</span>(household_income))   <span class="co"># Keep only ZIPs with ACS income</span></span>
+<span id="cb6-25"><a href="#cb6-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-26"><a href="#cb6-26" aria-hidden="true" tabindex="-1"></a>permits_zip <span class="ot">&lt;-</span> permits_income <span class="sc">|&gt;</span></span>
+<span id="cb6-27"><a href="#cb6-27" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(zipcode, household_income) <span class="sc">|&gt;</span></span>
+<span id="cb6-28"><a href="#cb6-28" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
+<span id="cb6-29"><a href="#cb6-29" aria-hidden="true" tabindex="-1"></a>    <span class="at">n_permits =</span> <span class="fu">n</span>(),</span>
+<span id="cb6-30"><a href="#cb6-30" aria-hidden="true" tabindex="-1"></a>    <span class="at">first_year =</span> <span class="fu">min</span>(start_year),</span>
+<span id="cb6-31"><a href="#cb6-31" aria-hidden="true" tabindex="-1"></a>    <span class="at">last_year =</span> <span class="fu">max</span>(start_year),</span>
+<span id="cb6-32"><a href="#cb6-32" aria-hidden="true" tabindex="-1"></a>    <span class="at">n_years =</span> last_year <span class="sc">-</span> first_year <span class="sc">+</span> <span class="dv">1</span>,</span>
+<span id="cb6-33"><a href="#cb6-33" aria-hidden="true" tabindex="-1"></a>    <span class="at">permits_per_year =</span> n_permits <span class="sc">/</span> n_years,</span>
+<span id="cb6-34"><a href="#cb6-34" aria-hidden="true" tabindex="-1"></a>    <span class="at">.groups =</span> <span class="st">"drop"</span></span>
+<span id="cb6-35"><a href="#cb6-35" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb6-36"><a href="#cb6-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-37"><a href="#cb6-37" aria-hidden="true" tabindex="-1"></a>permits_zip <span class="ot">&lt;-</span> permits_zip <span class="sc">|&gt;</span></span>
+<span id="cb6-38"><a href="#cb6-38" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb6-39"><a href="#cb6-39" aria-hidden="true" tabindex="-1"></a>    <span class="at">income_group =</span> <span class="fu">cut</span>(</span>
+<span id="cb6-40"><a href="#cb6-40" aria-hidden="true" tabindex="-1"></a>      household_income,</span>
+<span id="cb6-41"><a href="#cb6-41" aria-hidden="true" tabindex="-1"></a>      <span class="at">breaks =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">50000</span>, <span class="dv">75000</span>, <span class="dv">100000</span>, <span class="dv">150000</span>, <span class="cn">Inf</span>),</span>
+<span id="cb6-42"><a href="#cb6-42" aria-hidden="true" tabindex="-1"></a>      <span class="at">labels =</span> <span class="fu">c</span>(<span class="st">"&lt;$50k"</span>, <span class="st">"$50–75k"</span>, <span class="st">"$75–100k"</span>, <span class="st">"$100–150k"</span>, <span class="st">"$150k+"</span>),</span>
+<span id="cb6-43"><a href="#cb6-43" aria-hidden="true" tabindex="-1"></a>      <span class="at">right =</span> <span class="cn">FALSE</span></span>
+<span id="cb6-44"><a href="#cb6-44" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb6-45"><a href="#cb6-45" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb6-46"><a href="#cb6-46" aria-hidden="true" tabindex="-1"></a>income_summary <span class="ot">&lt;-</span> permits_zip <span class="sc">|&gt;</span></span>
+<span id="cb6-47"><a href="#cb6-47" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(income_group) <span class="sc">|&gt;</span></span>
+<span id="cb6-48"><a href="#cb6-48" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
+<span id="cb6-49"><a href="#cb6-49" aria-hidden="true" tabindex="-1"></a>    <span class="at">n_zips =</span> <span class="fu">n</span>(),</span>
+<span id="cb6-50"><a href="#cb6-50" aria-hidden="true" tabindex="-1"></a>    <span class="at">pct_with_any_filming =</span> <span class="fu">mean</span>(n_permits <span class="sc">&gt;</span> <span class="dv">0</span>),</span>
+<span id="cb6-51"><a href="#cb6-51" aria-hidden="true" tabindex="-1"></a>    <span class="at">median_permits_per_year =</span> <span class="fu">median</span>(permits_per_year),</span>
+<span id="cb6-52"><a href="#cb6-52" aria-hidden="true" tabindex="-1"></a>    <span class="at">mean_permits_per_year =</span> <span class="fu">mean</span>(permits_per_year),</span>
+<span id="cb6-53"><a href="#cb6-53" aria-hidden="true" tabindex="-1"></a>    <span class="at">.groups =</span> <span class="st">"drop"</span></span>
+<span id="cb6-54"><a href="#cb6-54" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb6-55"><a href="#cb6-55" aria-hidden="true" tabindex="-1"></a>income_summary</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-</div>
+</section>
+<section id="data-analysis" class="level1">
+<h1>Data Analysis</h1>
 <p>Now that we have all our datasets, we are able to explore the data.</p>
+<p>We will first create a visualization to show the relationship between income and film permits throughout New York City.</p>
 <div class="cell">
 <div class="cell-output-display">
 <div>
@@ -749,7 +654,96 @@ Multiple R-squared:  0.05326,   Adjusted R-squared:  0.05266
 F-statistic: 88.49 on 1 and 1573 DF,  p-value: &lt; 2.2e-16</code></pre>
 </div>
 </div>
+<p>The results show a positive and statistically meaningful relationship between income and filming. A Pearson correlation of 0.23 (p &lt; 0.001) indicates that higher-income ZIP codes tend to receive more filming permits. A linear regression confirms this pattern: each additional $10,000 in median household income is associated with approximately eight additional filming permits per year (p &lt; 0.001). While income explains a modest share of the overall variation in filming activity (R² = 0.053), the direction and consistency of the relationship suggest that lower-income communities are underrepresented in filming relative to higher-income communities. Although filming occurs across all boroughs and income levels, wealthier neighborhoods tend to experience both more frequent filming and a higher total number of permits over time.</p>
+<p>However, analyzing all five boroughs together can obscure important local differences. Each borough has its own infrastructure, land use patterns, and economic composition, which may influence filming decisions. To better understand how the income-filming relationship varies across the city, I separated the analysis by borough and recreated the same visualizations and summary statistics for each one.</p>
 <div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>zip_borough <span class="ot">&lt;-</span> <span class="fu">tribble</span>(</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  <span class="sc">~</span>zipcode, <span class="sc">~</span>borough,</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Manhattan</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>  <span class="st">"10001"</span>,<span class="st">"Manhattan"</span>,<span class="st">"10002"</span>,<span class="st">"Manhattan"</span>,<span class="st">"10003"</span>,<span class="st">"Manhattan"</span>,<span class="st">"10004"</span>,<span class="st">"Manhattan"</span>,</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>  <span class="st">"10005"</span>,<span class="st">"Manhattan"</span>,<span class="st">"10006"</span>,<span class="st">"Manhattan"</span>,<span class="st">"10007"</span>,<span class="st">"Manhattan"</span>,<span class="st">"10009"</span>,<span class="st">"Manhattan"</span>,</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>  <span class="st">"10010"</span>,<span class="st">"Manhattan"</span>,<span class="st">"10011"</span>,<span class="st">"Manhattan"</span>,<span class="st">"10012"</span>,<span class="st">"Manhattan"</span>,<span class="st">"10013"</span>,<span class="st">"Manhattan"</span>,</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>  <span class="st">"10014"</span>,<span class="st">"Manhattan"</span>,<span class="st">"10016"</span>,<span class="st">"Manhattan"</span>,<span class="st">"10017"</span>,<span class="st">"Manhattan"</span>,<span class="st">"10018"</span>,<span class="st">"Manhattan"</span>,</span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>  <span class="st">"10019"</span>,<span class="st">"Manhattan"</span>,<span class="st">"10021"</span>,<span class="st">"Manhattan"</span>,<span class="st">"10022"</span>,<span class="st">"Manhattan"</span>,<span class="st">"10023"</span>,<span class="st">"Manhattan"</span>,</span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>  <span class="st">"10024"</span>,<span class="st">"Manhattan"</span>,<span class="st">"10025"</span>,<span class="st">"Manhattan"</span>,<span class="st">"10026"</span>,<span class="st">"Manhattan"</span>,<span class="st">"10027"</span>,<span class="st">"Manhattan"</span>,</span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>  <span class="st">"10028"</span>,<span class="st">"Manhattan"</span>,<span class="st">"10029"</span>,<span class="st">"Manhattan"</span>,<span class="st">"10030"</span>,<span class="st">"Manhattan"</span>,<span class="st">"10031"</span>,<span class="st">"Manhattan"</span>,</span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>  <span class="st">"10032"</span>,<span class="st">"Manhattan"</span>,<span class="st">"10033"</span>,<span class="st">"Manhattan"</span>,<span class="st">"10034"</span>,<span class="st">"Manhattan"</span>,<span class="st">"10035"</span>,<span class="st">"Manhattan"</span>,</span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>  <span class="st">"10036"</span>,<span class="st">"Manhattan"</span>,<span class="st">"10037"</span>,<span class="st">"Manhattan"</span>,<span class="st">"10038"</span>,<span class="st">"Manhattan"</span>,<span class="st">"10039"</span>,<span class="st">"Manhattan"</span>,</span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>  <span class="st">"10040"</span>,<span class="st">"Manhattan"</span>,<span class="st">"10280"</span>,<span class="st">"Manhattan"</span>,<span class="st">"10282"</span>,<span class="st">"Manhattan"</span>,</span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Bronx</span></span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a>  <span class="st">"10451"</span>,<span class="st">"Bronx"</span>,<span class="st">"10452"</span>,<span class="st">"Bronx"</span>,<span class="st">"10453"</span>,<span class="st">"Bronx"</span>,<span class="st">"10454"</span>,<span class="st">"Bronx"</span>,</span>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a>  <span class="st">"10455"</span>,<span class="st">"Bronx"</span>,<span class="st">"10456"</span>,<span class="st">"Bronx"</span>,<span class="st">"10457"</span>,<span class="st">"Bronx"</span>,<span class="st">"10458"</span>,<span class="st">"Bronx"</span>,</span>
+<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a>  <span class="st">"10459"</span>,<span class="st">"Bronx"</span>,<span class="st">"10460"</span>,<span class="st">"Bronx"</span>,<span class="st">"10461"</span>,<span class="st">"Bronx"</span>,<span class="st">"10462"</span>,<span class="st">"Bronx"</span>,</span>
+<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a>  <span class="st">"10463"</span>,<span class="st">"Bronx"</span>,<span class="st">"10464"</span>,<span class="st">"Bronx"</span>,<span class="st">"10465"</span>,<span class="st">"Bronx"</span>,<span class="st">"10466"</span>,<span class="st">"Bronx"</span>,</span>
+<span id="cb9-20"><a href="#cb9-20" aria-hidden="true" tabindex="-1"></a>  <span class="st">"10467"</span>,<span class="st">"Bronx"</span>,<span class="st">"10468"</span>,<span class="st">"Bronx"</span>,<span class="st">"10469"</span>,<span class="st">"Bronx"</span>,<span class="st">"10470"</span>,<span class="st">"Bronx"</span>,</span>
+<span id="cb9-21"><a href="#cb9-21" aria-hidden="true" tabindex="-1"></a>  <span class="st">"10471"</span>,<span class="st">"Bronx"</span>,<span class="st">"10472"</span>,<span class="st">"Bronx"</span>,<span class="st">"10473"</span>,<span class="st">"Bronx"</span>,<span class="st">"10474"</span>,<span class="st">"Bronx"</span>,</span>
+<span id="cb9-22"><a href="#cb9-22" aria-hidden="true" tabindex="-1"></a>  <span class="st">"10475"</span>,<span class="st">"Bronx"</span>,</span>
+<span id="cb9-23"><a href="#cb9-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-24"><a href="#cb9-24" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Brooklyn</span></span>
+<span id="cb9-25"><a href="#cb9-25" aria-hidden="true" tabindex="-1"></a>  <span class="st">"11201"</span>,<span class="st">"Brooklyn"</span>,<span class="st">"11203"</span>,<span class="st">"Brooklyn"</span>,<span class="st">"11204"</span>,<span class="st">"Brooklyn"</span>,<span class="st">"11205"</span>,<span class="st">"Brooklyn"</span>,</span>
+<span id="cb9-26"><a href="#cb9-26" aria-hidden="true" tabindex="-1"></a>  <span class="st">"11206"</span>,<span class="st">"Brooklyn"</span>,<span class="st">"11207"</span>,<span class="st">"Brooklyn"</span>,<span class="st">"11208"</span>,<span class="st">"Brooklyn"</span>,<span class="st">"11209"</span>,<span class="st">"Brooklyn"</span>,</span>
+<span id="cb9-27"><a href="#cb9-27" aria-hidden="true" tabindex="-1"></a>  <span class="st">"11210"</span>,<span class="st">"Brooklyn"</span>,<span class="st">"11211"</span>,<span class="st">"Brooklyn"</span>,<span class="st">"11212"</span>,<span class="st">"Brooklyn"</span>,<span class="st">"11213"</span>,<span class="st">"Brooklyn"</span>,</span>
+<span id="cb9-28"><a href="#cb9-28" aria-hidden="true" tabindex="-1"></a>  <span class="st">"11214"</span>,<span class="st">"Brooklyn"</span>,<span class="st">"11215"</span>,<span class="st">"Brooklyn"</span>,<span class="st">"11216"</span>,<span class="st">"Brooklyn"</span>,<span class="st">"11217"</span>,<span class="st">"Brooklyn"</span>,</span>
+<span id="cb9-29"><a href="#cb9-29" aria-hidden="true" tabindex="-1"></a>  <span class="st">"11218"</span>,<span class="st">"Brooklyn"</span>,<span class="st">"11219"</span>,<span class="st">"Brooklyn"</span>,<span class="st">"11220"</span>,<span class="st">"Brooklyn"</span>,<span class="st">"11221"</span>,<span class="st">"Brooklyn"</span>,</span>
+<span id="cb9-30"><a href="#cb9-30" aria-hidden="true" tabindex="-1"></a>  <span class="st">"11222"</span>,<span class="st">"Brooklyn"</span>,<span class="st">"11223"</span>,<span class="st">"Brooklyn"</span>,<span class="st">"11224"</span>,<span class="st">"Brooklyn"</span>,<span class="st">"11225"</span>,<span class="st">"Brooklyn"</span>,</span>
+<span id="cb9-31"><a href="#cb9-31" aria-hidden="true" tabindex="-1"></a>  <span class="st">"11226"</span>,<span class="st">"Brooklyn"</span>,<span class="st">"11228"</span>,<span class="st">"Brooklyn"</span>,<span class="st">"11229"</span>,<span class="st">"Brooklyn"</span>,<span class="st">"11230"</span>,<span class="st">"Brooklyn"</span>,</span>
+<span id="cb9-32"><a href="#cb9-32" aria-hidden="true" tabindex="-1"></a>  <span class="st">"11231"</span>,<span class="st">"Brooklyn"</span>,<span class="st">"11232"</span>,<span class="st">"Brooklyn"</span>,<span class="st">"11233"</span>,<span class="st">"Brooklyn"</span>,<span class="st">"11234"</span>,<span class="st">"Brooklyn"</span>,</span>
+<span id="cb9-33"><a href="#cb9-33" aria-hidden="true" tabindex="-1"></a>  <span class="st">"11235"</span>,<span class="st">"Brooklyn"</span>,<span class="st">"11236"</span>,<span class="st">"Brooklyn"</span>,<span class="st">"11237"</span>,<span class="st">"Brooklyn"</span>,<span class="st">"11238"</span>,<span class="st">"Brooklyn"</span>,</span>
+<span id="cb9-34"><a href="#cb9-34" aria-hidden="true" tabindex="-1"></a>  <span class="st">"11239"</span>,<span class="st">"Brooklyn"</span>,</span>
+<span id="cb9-35"><a href="#cb9-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-36"><a href="#cb9-36" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Queens</span></span>
+<span id="cb9-37"><a href="#cb9-37" aria-hidden="true" tabindex="-1"></a>  <span class="st">"11004"</span>,<span class="st">"Queens"</span>,<span class="st">"11101"</span>,<span class="st">"Queens"</span>,<span class="st">"11102"</span>,<span class="st">"Queens"</span>,<span class="st">"11103"</span>,<span class="st">"Queens"</span>,</span>
+<span id="cb9-38"><a href="#cb9-38" aria-hidden="true" tabindex="-1"></a>  <span class="st">"11104"</span>,<span class="st">"Queens"</span>,<span class="st">"11105"</span>,<span class="st">"Queens"</span>,<span class="st">"11106"</span>,<span class="st">"Queens"</span>,<span class="st">"11351"</span>,<span class="st">"Queens"</span>,</span>
+<span id="cb9-39"><a href="#cb9-39" aria-hidden="true" tabindex="-1"></a>  <span class="st">"11354"</span>,<span class="st">"Queens"</span>,<span class="st">"11355"</span>,<span class="st">"Queens"</span>,<span class="st">"11356"</span>,<span class="st">"Queens"</span>,<span class="st">"11357"</span>,<span class="st">"Queens"</span>,</span>
+<span id="cb9-40"><a href="#cb9-40" aria-hidden="true" tabindex="-1"></a>  <span class="st">"11358"</span>,<span class="st">"Queens"</span>,<span class="st">"11360"</span>,<span class="st">"Queens"</span>,<span class="st">"11361"</span>,<span class="st">"Queens"</span>,<span class="st">"11362"</span>,<span class="st">"Queens"</span>,</span>
+<span id="cb9-41"><a href="#cb9-41" aria-hidden="true" tabindex="-1"></a>  <span class="st">"11363"</span>,<span class="st">"Queens"</span>,<span class="st">"11364"</span>,<span class="st">"Queens"</span>,<span class="st">"11365"</span>,<span class="st">"Queens"</span>,<span class="st">"11366"</span>,<span class="st">"Queens"</span>,</span>
+<span id="cb9-42"><a href="#cb9-42" aria-hidden="true" tabindex="-1"></a>  <span class="st">"11367"</span>,<span class="st">"Queens"</span>,<span class="st">"11368"</span>,<span class="st">"Queens"</span>,<span class="st">"11369"</span>,<span class="st">"Queens"</span>,<span class="st">"11370"</span>,<span class="st">"Queens"</span>,</span>
+<span id="cb9-43"><a href="#cb9-43" aria-hidden="true" tabindex="-1"></a>  <span class="st">"11372"</span>,<span class="st">"Queens"</span>,<span class="st">"11373"</span>,<span class="st">"Queens"</span>,<span class="st">"11374"</span>,<span class="st">"Queens"</span>,<span class="st">"11375"</span>,<span class="st">"Queens"</span>,</span>
+<span id="cb9-44"><a href="#cb9-44" aria-hidden="true" tabindex="-1"></a>  <span class="st">"11377"</span>,<span class="st">"Queens"</span>,<span class="st">"11378"</span>,<span class="st">"Queens"</span>,<span class="st">"11379"</span>,<span class="st">"Queens"</span>,<span class="st">"11385"</span>,<span class="st">"Queens"</span>,</span>
+<span id="cb9-45"><a href="#cb9-45" aria-hidden="true" tabindex="-1"></a>  <span class="st">"11411"</span>,<span class="st">"Queens"</span>,<span class="st">"11412"</span>,<span class="st">"Queens"</span>,<span class="st">"11413"</span>,<span class="st">"Queens"</span>,<span class="st">"11414"</span>,<span class="st">"Queens"</span>,</span>
+<span id="cb9-46"><a href="#cb9-46" aria-hidden="true" tabindex="-1"></a>  <span class="st">"11415"</span>,<span class="st">"Queens"</span>,<span class="st">"11416"</span>,<span class="st">"Queens"</span>,<span class="st">"11417"</span>,<span class="st">"Queens"</span>,<span class="st">"11418"</span>,<span class="st">"Queens"</span>,</span>
+<span id="cb9-47"><a href="#cb9-47" aria-hidden="true" tabindex="-1"></a>  <span class="st">"11419"</span>,<span class="st">"Queens"</span>,<span class="st">"11420"</span>,<span class="st">"Queens"</span>,<span class="st">"11421"</span>,<span class="st">"Queens"</span>,<span class="st">"11422"</span>,<span class="st">"Queens"</span>,</span>
+<span id="cb9-48"><a href="#cb9-48" aria-hidden="true" tabindex="-1"></a>  <span class="st">"11423"</span>,<span class="st">"Queens"</span>,<span class="st">"11426"</span>,<span class="st">"Queens"</span>,<span class="st">"11427"</span>,<span class="st">"Queens"</span>,<span class="st">"11428"</span>,<span class="st">"Queens"</span>,</span>
+<span id="cb9-49"><a href="#cb9-49" aria-hidden="true" tabindex="-1"></a>  <span class="st">"11429"</span>,<span class="st">"Queens"</span>,<span class="st">"11432"</span>,<span class="st">"Queens"</span>,<span class="st">"11433"</span>,<span class="st">"Queens"</span>,<span class="st">"11434"</span>,<span class="st">"Queens"</span>,</span>
+<span id="cb9-50"><a href="#cb9-50" aria-hidden="true" tabindex="-1"></a>  <span class="st">"11435"</span>,<span class="st">"Queens"</span>,<span class="st">"11436"</span>,<span class="st">"Queens"</span>,<span class="st">"11691"</span>,<span class="st">"Queens"</span>,<span class="st">"11692"</span>,<span class="st">"Queens"</span>,</span>
+<span id="cb9-51"><a href="#cb9-51" aria-hidden="true" tabindex="-1"></a>  <span class="st">"11693"</span>,<span class="st">"Queens"</span>,<span class="st">"11694"</span>,<span class="st">"Queens"</span>,<span class="st">"11697"</span>,<span class="st">"Queens"</span>,</span>
+<span id="cb9-52"><a href="#cb9-52" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-53"><a href="#cb9-53" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Staten Island</span></span>
+<span id="cb9-54"><a href="#cb9-54" aria-hidden="true" tabindex="-1"></a>  <span class="st">"10301"</span>,<span class="st">"Staten Island"</span>,<span class="st">"10302"</span>,<span class="st">"Staten Island"</span>,<span class="st">"10303"</span>,<span class="st">"Staten Island"</span>,</span>
+<span id="cb9-55"><a href="#cb9-55" aria-hidden="true" tabindex="-1"></a>  <span class="st">"10304"</span>,<span class="st">"Staten Island"</span>,<span class="st">"10305"</span>,<span class="st">"Staten Island"</span>,<span class="st">"10306"</span>,<span class="st">"Staten Island"</span>,</span>
+<span id="cb9-56"><a href="#cb9-56" aria-hidden="true" tabindex="-1"></a>  <span class="st">"10307"</span>,<span class="st">"Staten Island"</span>,<span class="st">"10308"</span>,<span class="st">"Staten Island"</span>,<span class="st">"10309"</span>,<span class="st">"Staten Island"</span>,</span>
+<span id="cb9-57"><a href="#cb9-57" aria-hidden="true" tabindex="-1"></a>  <span class="st">"10310"</span>,<span class="st">"Staten Island"</span>,<span class="st">"10312"</span>,<span class="st">"Staten Island"</span>,<span class="st">"10314"</span>,<span class="st">"Staten Island"</span></span>
+<span id="cb9-58"><a href="#cb9-58" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb9-59"><a href="#cb9-59" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-60"><a href="#cb9-60" aria-hidden="true" tabindex="-1"></a>permits_zip <span class="ot">&lt;-</span> permits_zip <span class="sc">|&gt;</span></span>
+<span id="cb9-61"><a href="#cb9-61" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(zip_borough, <span class="at">by =</span> <span class="st">"zipcode"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb9-62"><a href="#cb9-62" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="sc">!</span><span class="fu">is.na</span>(borough))</span>
+<span id="cb9-63"><a href="#cb9-63" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-64"><a href="#cb9-64" aria-hidden="true" tabindex="-1"></a>make_borough_plot <span class="ot">&lt;-</span> <span class="cf">function</span>(boro_label) {</span>
+<span id="cb9-65"><a href="#cb9-65" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(</span>
+<span id="cb9-66"><a href="#cb9-66" aria-hidden="true" tabindex="-1"></a>    permits_zip <span class="sc">|&gt;</span> <span class="fu">filter</span>(borough <span class="sc">==</span> boro_label),</span>
+<span id="cb9-67"><a href="#cb9-67" aria-hidden="true" tabindex="-1"></a>    <span class="fu">aes</span>(<span class="at">x =</span> household_income, <span class="at">y =</span> permits_per_year)</span>
+<span id="cb9-68"><a href="#cb9-68" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
+<span id="cb9-69"><a href="#cb9-69" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_point</span>(<span class="at">alpha =</span> <span class="fl">0.6</span>) <span class="sc">+</span></span>
+<span id="cb9-70"><a href="#cb9-70" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_smooth</span>(<span class="at">method =</span> <span class="st">"lm"</span>, <span class="at">se =</span> <span class="cn">FALSE</span>, <span class="at">color =</span> <span class="st">"red"</span>) <span class="sc">+</span></span>
+<span id="cb9-71"><a href="#cb9-71" aria-hidden="true" tabindex="-1"></a>    <span class="fu">scale_x_continuous</span>(<span class="at">labels =</span> scales<span class="sc">::</span><span class="fu">label_dollar</span>()) <span class="sc">+</span></span>
+<span id="cb9-72"><a href="#cb9-72" aria-hidden="true" tabindex="-1"></a>    <span class="fu">labs</span>(</span>
+<span id="cb9-73"><a href="#cb9-73" aria-hidden="true" tabindex="-1"></a>      <span class="at">title =</span> <span class="fu">paste</span>(<span class="st">"Filming Intensity vs Income in"</span>, boro_label),</span>
+<span id="cb9-74"><a href="#cb9-74" aria-hidden="true" tabindex="-1"></a>      <span class="at">subtitle =</span> <span class="st">"Each point represents a ZIP code"</span>,</span>
+<span id="cb9-75"><a href="#cb9-75" aria-hidden="true" tabindex="-1"></a>      <span class="at">x =</span> <span class="st">"Median Household Income"</span>,</span>
+<span id="cb9-76"><a href="#cb9-76" aria-hidden="true" tabindex="-1"></a>      <span class="at">y =</span> <span class="st">"Average Filming Permits per Year"</span></span>
+<span id="cb9-77"><a href="#cb9-77" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">+</span></span>
+<span id="cb9-78"><a href="#cb9-78" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme_minimal</span>(<span class="at">base_size =</span> <span class="dv">13</span>)</span>
+<span id="cb9-79"><a href="#cb9-79" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb9-80"><a href="#cb9-80" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-81"><a href="#cb9-81" aria-hidden="true" tabindex="-1"></a>p_manhattan    <span class="ot">&lt;-</span> <span class="fu">make_borough_plot</span>(<span class="st">"Manhattan"</span>)</span>
+<span id="cb9-82"><a href="#cb9-82" aria-hidden="true" tabindex="-1"></a>p_brooklyn     <span class="ot">&lt;-</span> <span class="fu">make_borough_plot</span>(<span class="st">"Brooklyn"</span>)</span>
+<span id="cb9-83"><a href="#cb9-83" aria-hidden="true" tabindex="-1"></a>p_queens       <span class="ot">&lt;-</span> <span class="fu">make_borough_plot</span>(<span class="st">"Queens"</span>)</span>
+<span id="cb9-84"><a href="#cb9-84" aria-hidden="true" tabindex="-1"></a>p_bronx        <span class="ot">&lt;-</span> <span class="fu">make_borough_plot</span>(<span class="st">"Bronx"</span>)</span>
+<span id="cb9-85"><a href="#cb9-85" aria-hidden="true" tabindex="-1"></a>p_statenisland <span class="ot">&lt;-</span> <span class="fu">make_borough_plot</span>(<span class="st">"Staten Island"</span>)</span>
+<span id="cb9-86"><a href="#cb9-86" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-87"><a href="#cb9-87" aria-hidden="true" tabindex="-1"></a>p_manhattan</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output-display">
 <div>
 <figure class="figure">
@@ -757,6 +751,7 @@ F-statistic: 88.49 on 1 and 1573 DF,  p-value: &lt; 2.2e-16</code></pre>
 </figure>
 </div>
 </div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>p_brooklyn</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output-display">
 <div>
 <figure class="figure">
@@ -764,6 +759,7 @@ F-statistic: 88.49 on 1 and 1573 DF,  p-value: &lt; 2.2e-16</code></pre>
 </figure>
 </div>
 </div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>p_queens</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output-display">
 <div>
 <figure class="figure">
@@ -771,6 +767,7 @@ F-statistic: 88.49 on 1 and 1573 DF,  p-value: &lt; 2.2e-16</code></pre>
 </figure>
 </div>
 </div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>p_bronx</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output-display">
 <div>
 <figure class="figure">
@@ -778,6 +775,7 @@ F-statistic: 88.49 on 1 and 1573 DF,  p-value: &lt; 2.2e-16</code></pre>
 </figure>
 </div>
 </div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>p_statenisland</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output-display">
 <div>
 <figure class="figure">
@@ -786,6 +784,52 @@ F-statistic: 88.49 on 1 and 1573 DF,  p-value: &lt; 2.2e-16</code></pre>
 </div>
 </div>
 </div>
+<section id="manhattan" class="level3">
+<h3 class="anchored" data-anchor-id="manhattan">Manhattan</h3>
+<p>In Manhattan, the relationship between income and filming activity is the strongest and most consistent. Higher-income ZIP codes receive substantially more filming permits per year than lower-income ZIP codes, and the scatter plot shows a clear upward trend. While lower-income ZIP codes are not completely excluded from filming, they receive far fewer permits and cluster near the bottom of the distribution. This indicates that filming in Manhattan is heavily concentrated in wealthier areas.</p>
+</section>
+<section id="brooklyn" class="level3">
+<h3 class="anchored" data-anchor-id="brooklyn">Brooklyn</h3>
+<p>Brooklyn also exhibits a positive relationship between income and filming, though with more variation than Manhattan. Higher-income ZIP codes tend to receive more filming permits, while lower-income ZIP codes more frequently experience little or no filming activity. The upward-sloping trend line suggests that income remains an important factor in filming location decisions, but Brooklyn’s broader income distribution leads to a wider spread of outcomes, including moderate filming activity in some middle-income ZIP codes.</p>
+</section>
+<section id="queens" class="level3">
+<h3 class="anchored" data-anchor-id="queens">Queens</h3>
+<p>In Queens, the relationship between income and filming is present but weaker. Filming permits are more evenly distributed across ZIP codes, and the trend line is less steep. While higher-income ZIP codes still tend to receive more filming on average, there are more exceptions than in Manhattan or Brooklyn. This suggests that additional factors—such as available space, industrial land use, or proximity to studios—may play a larger role in filming decisions in Queens, even though income continues to matter.</p>
+</section>
+<section id="bronx" class="level3">
+<h3 class="anchored" data-anchor-id="bronx">Bronx</h3>
+<p>The Bronx shows lower overall filming activity compared to other boroughs. Most ZIP codes, regardless of income level, receive relatively few filming permits per year. Higher-income ZIP codes in the Bronx do receive slightly more filming than lower-income ZIP codes, but the difference is modest. This suggests that while income plays a role, the borough as a whole is underrepresented in film production.</p>
+</section>
+<section id="staten-island" class="level3">
+<h3 class="anchored" data-anchor-id="staten-island">Staten Island</h3>
+<p>Staten Island experiences the least filming activity overall. Many ZIP codes receive few or no filming permits, and the relationship between income and filming is weak and inconsistent. The small number of ZIP codes and limited filming events make patterns harder to detect, but the data indicate that Staten Island is largely overlooked by the film industry regardless of income level.</p>
+<p>Across all five boroughs, higher-income ZIP codes are generally more likely to host filming and to do so more frequently, though the strength of this pattern varies. Manhattan and Brooklyn show the clearest income-based disparities, while Queens displays a weaker relationship and the Bronx and Staten Island experience low filming activity overall. Taken together, these borough-level patterns reinforce the conclusion that lower-income communities are systematically underrepresented in New York City’s filming landscape.</p>
+</section>
+</section>
+<section id="conclusion" class="level1">
+<h1>Conclusion</h1>
+<p>Asking whether certain communities are systematically left out of filming—particularly lower-income neighborhoods—helps establish an essential baseline for evaluating whether film production activity can act as an early signal of rising real estate values in New York City. If filming were evenly distributed across neighborhoods regardless of income, film permits would provide little insight into future housing market changes. However, the data show that filming activity is not random. Instead, it is concentrated in higher-income ZIP codes and occurs much less frequently in lower-income areas.</p>
+<p>Understanding this uneven distribution is crucial because it helps distinguish cause from correlation. If film production consistently avoids lower-income neighborhoods, then high levels of filming may simply reflect existing wealth rather than predict future growth. In this case, filming activity would follow real estate value increases instead of leading them. Without first identifying which communities are excluded from filming, it would be easy to misinterpret film permits as a predictive signal when they are actually responding to established market conditions.</p>
+<p>At the same time, the analysis also shows that filming does occur across all boroughs, even if unevenly. In boroughs such as Queens and Brooklyn, some lower-income ZIP codes still receive moderate filming activity. These cases are especially important for future research. If filming begins to appear in historically underrepresented or lower-income areas and is followed by rising rents or property values, that pattern could suggest that film production is identifying neighborhoods with future growth potential—perhaps due to unique physical characteristics, improving infrastructure, or increasing cultural visibility.</p>
+<p>This analysis highlights an important limitation as well: income alone does not fully explain filming activity. Factors such as zoning, industrial land use, neighborhood aesthetics, permitting logistics, and community receptiveness likely play meaningful roles. Future research could strengthen these findings by incorporating land-use data, historical property values, or time-lagged housing outcomes to better assess whether filming precedes or follows real estate change.</p>
+<p>Overall, by first examining whether lower-income communities are systematically excluded from filming, this analysis clarifies when and where film permits can plausibly serve as a leading indicator. Film production is most likely to signal future real estate change in neighborhoods where filming expands beyond traditionally high-income areas. Without this foundational understanding, it would be impossible to determine whether film activity is driving neighborhood change or merely reflecting existing economic inequality.</p>
+</section>
+<section id="limitations" class="level1">
+<h1>Limitations</h1>
+<p>While this analysis provides valuable insight into the relationship between neighborhood income and filming activity in New York City, several limitations should be acknowledged.</p>
+<p>First, the analysis relies on ZIP codes as a proxy for neighborhoods. ZIP codes are designed for mail delivery rather than for capturing social or economic boundaries, and they can contain a mix of income levels, housing types, and land uses. As a result, some within-ZIP variation in income or filming activity may be obscured. Using smaller geographic units, such as census tracts, could provide a more precise picture of how filming relates to neighborhood-level economic conditions.</p>
+<p>Second, the analysis focuses primarily on median household income as the key explanatory variable. While income is an important indicator of neighborhood economic status, it does not fully capture other factors that may influence filming decisions. Variables such as zoning regulations, availability of industrial or commercial space, street layout, proximity to studios, and neighborhood infrastructure likely play an important role. Because these factors are not included in the current analysis, the results should not be interpreted as income being the sole driver of filming activity.</p>
+<p>Third, the study examines associations rather than causal relationships. Although higher-income ZIP codes tend to receive more filming permits, this analysis cannot determine whether income causes increased filming or whether both are driven by underlying neighborhood characteristics. Similarly, while filming activity may be related to real estate trends, this study does not establish whether filming precedes changes in property values or simply follows them.</p>
+<p>Finally, filming permit data captures approved filming events, but it may not fully reflect informal production activity, short-term shoots, or variations in the scale of productions. A large studio production and a small independent shoot are treated equally in the permit data, even though their economic and social impacts may differ substantially.</p>
+</section>
+<section id="future-research" class="level1">
+<h1>Future Research</h1>
+<p>Future research could build on this analysis in several meaningful ways. One important extension would be to examine the timing of filming activity relative to changes in real estate values. By incorporating time-lagged housing data—such as rent growth, sale prices, or building permits—researchers could assess whether increases in filming activity tend to occur before, during, or after changes in neighborhood real estate markets. This would help clarify whether filming acts as an early signal of neighborhood change or simply reflects existing trends.</p>
+<p>Another promising direction would be to incorporate additional neighborhood characteristics, such as zoning classifications, land use patterns, or commercial density. Including these variables could help disentangle whether filming is driven by economic status, physical space availability, or regulatory factors. In particular, identifying the role of industrial and mixed-use areas could shed light on why some lower-income ZIP codes still attract filming activity.</p>
+<p>Future work could also explore borough-specific dynamics in greater depth, including how local permitting practices, infrastructure, or community engagement influence filming decisions. Comparing New York City to other major filming hubs could further contextualize whether the observed patterns are unique to NYC or common across cities with large film industries.</p>
+<p>Finally, qualitative research—such as interviews with location scouts, production managers, or community organizations—could complement the quantitative findings. These perspectives could provide insight into how filming locations are chosen and how residents experience the presence or absence of film production in their neighborhoods.</p>
+<p>Together, these extensions would deepen our understanding of how film production interacts with urban development and housing markets, and would help determine whether filming activity can serve as a meaningful early indicator of neighborhood change.</p>
+<p>Last Updated: Friday 12 19, 2025 at 04:31AM</p>
 
 
 </section>
